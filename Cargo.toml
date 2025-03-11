@@ -1,0 +1,18 @@
+[package]
+name = "rust_kafka"
+version = "0.1.0"
+edition = "2021"
+
+
+[workspace]
+members = ["cluster", "consumer", "network", "producer", "queue", "replication", "storage"]
+
+
+[dependencies]
+network = { path = "./network" }
+storage = { path = "./storage" }
+queue = { path = "./queue" }
+producer = { path = "./producer" }
+consumer = { path = "./consumer" }
+replication = { path = "./replication" }
+cluster = { path = "./cluster" }
