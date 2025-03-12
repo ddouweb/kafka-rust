@@ -4,10 +4,9 @@ use tokio::sync::Mutex;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 
-use std::net::TcpStream;
-use crate::message::BinaryMessage;
-
+use tokio::net::TcpStream;
 pub mod message;
+use crate::message::BinaryMessage;
 
 #[derive(Debug, Deserialize)]
 struct Request {
@@ -76,12 +75,9 @@ impl NetworkServer {
     }
 }
 
-
-pub fn send_message(stream: &mut TcpStream, msg: &BinaryMessage) -> std::io::Result<()> {
+pub async fn send_message(stream: &mut TcpStream, msg: &BinaryMessage) -> tokio::io::Result<()> {
     let encoded = msg.encode();
-    stream.write_all(&encoded)?;
+    stream.write_all(&encoded).await?; // 使用异步写入
+    stream.flush().await?; // 确保数据写入
     Ok(())
-}
-pub fn receive_message(stream: &mut TcpStream) -> std::io::Result<BinaryMessage> {
-    BinaryMessage::decode(stream)
 }

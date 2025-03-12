@@ -1,7 +1,7 @@
 use network::NetworkServer;
 use tokio::net::TcpStream;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
-use network::BinaryMessage;
+use network::message::BinaryMessage;
 
 #[tokio::test]
 async fn test_network_server() {
@@ -29,7 +29,7 @@ async fn test_network_server() {
     stream.write_all(&original_msg.encode()).await.unwrap();    
 
     // 读取服务器返回的数据
-    let mut buffer = [0; 1024];
+    let mut buffer = [0; 10240];
     let n = stream.read(&mut buffer).await.unwrap();
     let response = String::from_utf8_lossy(&buffer[..n]);
 

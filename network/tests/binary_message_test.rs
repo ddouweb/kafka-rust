@@ -1,4 +1,4 @@
-use network::BinaryMessage;
+use network::message::BinaryMessage;
 #[cfg(test)]
 mod tests {
     use super::*;
