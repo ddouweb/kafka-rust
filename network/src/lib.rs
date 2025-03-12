@@ -1,16 +1,18 @@
-use tokio::net::TcpListener;
-use tokio::io::{AsyncReadExt, AsyncWriteExt};
-use tokio::sync::Mutex;
+pub mod message;
+
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
+use tokio::io::{AsyncReadExt, AsyncWriteExt};
+use tokio::net::TcpListener;
+use tokio::sync::Mutex;
 
 use tokio::net::TcpStream;
-pub mod message;
+
 use crate::message::BinaryMessage;
 
 #[derive(Debug, Deserialize)]
 struct Request {
-    r#type: String,  // `type` 是关键字，需要用 `r#` 逃避
+    r#type: String, // `type` 是关键字，需要用 `r#` 逃避
     topic: String,
     message: Option<String>,
 }
@@ -33,6 +35,7 @@ impl NetworkServer {
     }
 
     pub async fn start(&self) -> tokio::io::Result<()> {
+        //tokio::net::UdpSocket::bind("127.0.0.1:9092").await?;
         let listener = TcpListener::bind(&self.address).await?;
         println!("🚀 Server running on {}", self.address);
 
@@ -47,26 +50,25 @@ impl NetworkServer {
                 let mut buffer = vec![0; 1048576]; // 扩大 buffer
                 match socket.read(&mut buffer).await {
                     Ok(n) if n > 0 => {
-                        let request_str = String::from_utf8_lossy(&buffer[..n]);
-                        println!("📩 Received: {}", request_str);
-
-                        let response: Response = match serde_json::from_str::<Request>(&request_str) {
-                            Ok(req) => {
-                                if req.r#type == "produce" {
-                                    println!("📝 Storing message in topic `{}`: {:?}", req.topic, req.message);
-                                    Response { status: "ok".to_string(), message: "Message received".to_string() }
-                                } else if req.r#type == "fetch" {
-                                    println!("📤 Fetching messages for topic `{}`", req.topic);
-                                    Response { status: "ok".to_string(), message: format!("Messages from {}", req.topic) }
-                                } else {
-                                    Response { status: "error".to_string(), message: "Invalid request type".to_string() }
-                                }
+                        // 示例：通过 BinaryMessage 解析二进制数据
+                        let mut cursor = &buffer[..n];
+                        match BinaryMessage::decode(&mut cursor) {
+                            Ok(binary_message) => {
+                                println!("Decoded message: {:?}", binary_message);
                             }
-                            Err(_) => Response { status: "error".to_string(), message: "Invalid JSON".to_string() },
+                            Err(e) => eprintln!("Error decoding message: {}", e),
+                        }
+
+                        // 创建 BinaryMessage 实例并调用 send_message
+                        let response_message = BinaryMessage {
+                            msg_type: 1,     // 根据需要设置类型
+                            msg_id: 1234,    // 设置唯一的消息 ID
+                            payload:  b"Hello, Client, message is reviced !".to_vec(), // 负载内容可以是空的，或者根据需要填充
                         };
 
-                        let response_str = serde_json::to_string(&response).unwrap();
-                        socket.write_all(response_str.as_bytes()).await.unwrap();
+                        if let Err(e) = send_message(&mut socket, &response_message).await {
+                            eprintln!("Error sending message: {}", e);
+                        }
                     }
                     _ => println!("⚠️ Connection lost: {}", addr),
                 }
