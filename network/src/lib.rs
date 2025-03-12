@@ -1,25 +1,29 @@
 use tokio::net::TcpListener;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::sync::Mutex;
+use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 
-pub fn add(left: u64, right: u64) -> u64 {
-    left + right
+pub mod message;
+pub use message::BinaryMessage;
+
+#[derive(Debug, Deserialize)]
+struct Request {
+    r#type: String,  // `type` 是关键字，需要用 `r#` 逃避
+    topic: String,
+    message: Option<String>,
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn it_works() {
-        let result = add(2, 2);
-        assert_eq!(result, 4);
-    }
+#[derive(Debug, Serialize)]
+struct Response {
+    status: String,
+    message: String,
 }
+
 pub struct NetworkServer {
     address: String,
 }
+
 impl NetworkServer {
     pub fn new(address: &str) -> Self {
         Self {
@@ -31,7 +35,7 @@ impl NetworkServer {
         let listener = TcpListener::bind(&self.address).await?;
         println!("🚀 Server running on {}", self.address);
 
-        let shared_state = Arc::new(Mutex::new(())); // 这里可以用来共享状态（如存储队列）
+        let shared_state = Arc::new(Mutex::new(())); // 这里可以存储消息
 
         loop {
             let (mut socket, addr) = listener.accept().await?;
@@ -39,15 +43,29 @@ impl NetworkServer {
 
             let state = Arc::clone(&shared_state);
             tokio::spawn(async move {
-                let mut buffer = [0; 1024];
-
+                let mut buffer = vec![0; 1048576]; // 扩大 buffer
                 match socket.read(&mut buffer).await {
                     Ok(n) if n > 0 => {
-                        let request = String::from_utf8_lossy(&buffer[..n]);
-                        println!("📩 Received: {}", request);
+                        let request_str = String::from_utf8_lossy(&buffer[..n]);
+                        println!("📩 Received: {}", request_str);
 
-                        let response = format!("ACK: {}", request);
-                        socket.write_all(response.as_bytes()).await.unwrap();
+                        let response: Response = match serde_json::from_str::<Request>(&request_str) {
+                            Ok(req) => {
+                                if req.r#type == "produce" {
+                                    println!("📝 Storing message in topic `{}`: {:?}", req.topic, req.message);
+                                    Response { status: "ok".to_string(), message: "Message received".to_string() }
+                                } else if req.r#type == "fetch" {
+                                    println!("📤 Fetching messages for topic `{}`", req.topic);
+                                    Response { status: "ok".to_string(), message: format!("Messages from {}", req.topic) }
+                                } else {
+                                    Response { status: "error".to_string(), message: "Invalid request type".to_string() }
+                                }
+                            }
+                            Err(_) => Response { status: "error".to_string(), message: "Invalid JSON".to_string() },
+                        };
+
+                        let response_str = serde_json::to_string(&response).unwrap();
+                        socket.write_all(response_str.as_bytes()).await.unwrap();
                     }
                     _ => println!("⚠️ Connection lost: {}", addr),
                 }

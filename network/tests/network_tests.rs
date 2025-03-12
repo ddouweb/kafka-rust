@@ -4,7 +4,8 @@ use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
 #[tokio::test]
 async fn test_network_server() {
-    let server = NetworkServer::new("127.0.0.1:9093");
+    let addr = "127.0.0.1:9093";
+    let server = NetworkServer::new(addr);
 
     // 启动服务器
     tokio::spawn(async move {
@@ -15,9 +16,10 @@ async fn test_network_server() {
     tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
 
     // 模拟客户端连接服务器
-    let mut stream = TcpStream::connect("127.0.0.1:9093").await.unwrap();
+    let mut stream = TcpStream::connect(addr).await.unwrap();
     let message = "Test Message";
     stream.write_all(message.as_bytes()).await.unwrap();
+    
 
     // 读取服务器返回的数据
     let mut buffer = [0; 1024];
