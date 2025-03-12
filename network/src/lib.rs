@@ -4,8 +4,10 @@ use tokio::sync::Mutex;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 
+use std::net::TcpStream;
+use crate::message::BinaryMessage;
+
 pub mod message;
-pub use message::BinaryMessage;
 
 #[derive(Debug, Deserialize)]
 struct Request {
@@ -72,4 +74,14 @@ impl NetworkServer {
             });
         }
     }
+}
+
+
+pub fn send_message(stream: &mut TcpStream, msg: &BinaryMessage) -> std::io::Result<()> {
+    let encoded = msg.encode();
+    stream.write_all(&encoded)?;
+    Ok(())
+}
+pub fn receive_message(stream: &mut TcpStream) -> std::io::Result<BinaryMessage> {
+    BinaryMessage::decode(stream)
 }

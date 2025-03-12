@@ -1,6 +1,7 @@
 use network::NetworkServer;
 use tokio::net::TcpStream;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
+use network::BinaryMessage;
 
 #[tokio::test]
 async fn test_network_server() {
@@ -18,8 +19,14 @@ async fn test_network_server() {
     // 模拟客户端连接服务器
     let mut stream = TcpStream::connect(addr).await.unwrap();
     let message = "Test Message";
-    stream.write_all(message.as_bytes()).await.unwrap();
+
+    let original_msg = BinaryMessage {
+        msg_type: 1,
+        msg_id: 42,
+        payload: b"Hello, Kafka!".to_vec(),
+    };
     
+    stream.write_all(&original_msg.encode()).await.unwrap();    
 
     // 读取服务器返回的数据
     let mut buffer = [0; 1024];
