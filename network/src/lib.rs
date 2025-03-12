@@ -1,6 +1,5 @@
 pub mod message;
 
-use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::TcpListener;
@@ -9,19 +8,6 @@ use tokio::sync::Mutex;
 use tokio::net::TcpStream;
 
 use crate::message::BinaryMessage;
-
-#[derive(Debug, Deserialize)]
-struct Request {
-    r#type: String, // `type` 是关键字，需要用 `r#` 逃避
-    topic: String,
-    message: Option<String>,
-}
-
-#[derive(Debug, Serialize)]
-struct Response {
-    status: String,
-    message: String,
-}
 
 pub struct NetworkServer {
     address: String,
@@ -45,7 +31,7 @@ impl NetworkServer {
             let (mut socket, addr) = listener.accept().await?;
             println!("📡 New connection: {}", addr);
 
-            let state = Arc::clone(&shared_state);
+            let _ = Arc::clone(&shared_state);
             tokio::spawn(async move {
                 let mut buffer = vec![0; 1048576]; // 扩大 buffer
                 match socket.read(&mut buffer).await {
