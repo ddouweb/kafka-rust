@@ -6,6 +6,7 @@ use tokio::net::TcpListener;
 use tokio::sync::Mutex;
 
 use tokio::net::TcpStream;
+use tokio::io::ErrorKind;
 
 use crate::message::BinaryMessage;
 
@@ -38,7 +39,15 @@ impl NetworkServer {
                             eprintln!("Error sending message: {}", e);
                         }
                     }
-                    Err(e) => eprintln!("❌ Failed to receive message: {}", e),
+                    //Err(e) => eprintln!("❌ Failed to receive message: {}", e),
+                    Err(e) => {
+                        // ✅ 客户端断开连接
+                        if e.kind() == ErrorKind::UnexpectedEof || e.kind() == ErrorKind::ConnectionReset {
+                            println!("❌ Client {} disconnected.", addr);
+                        } else {
+                            eprintln!("❌ Failed to receive message: {}", e);
+                        }
+                    }
                 }
             });
         }
@@ -46,7 +55,6 @@ impl NetworkServer {
 }
 
 pub async fn send_message(stream: &mut TcpStream, msg: &BinaryMessage) -> tokio::io::Result<()> {
-    println!("Sending message: {:?}", msg);
     let encoded = msg.encode();
     stream.write_all(&encoded).await?; // 使用异步写入
     stream.flush().await?; // 确保数据写入

@@ -6,6 +6,8 @@ use tokio::net::TcpStream;
 use network::receive_message;
 use network::send_message;
 
+use tokio::io::AsyncWriteExt;
+
 #[tokio::test]
 async fn test_send_message() {
     let addr = "127.0.0.1:9092";
@@ -29,4 +31,5 @@ async fn test_send_message() {
     assert_eq!(response.payload, original_msg.payload);
     assert_eq!(response.msg_type, original_msg.msg_type);
     assert_eq!(response.msg_id, original_msg.msg_id);
+    stream.shutdown().await.expect("Failed to shutdown connection");
 }
