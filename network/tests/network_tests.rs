@@ -1,12 +1,11 @@
 use std::vec;
 
 use network::message::BinaryMessage;
+use rand::Rng;
 use tokio::net::TcpStream;
 
 use network::receive_message;
 use network::send_message;
-
-use tokio::io::AsyncWriteExt;
 
 #[tokio::test]
 async fn test_send_message() {
@@ -15,21 +14,35 @@ async fn test_send_message() {
     // 模拟客户端连接服务器
     let mut stream = TcpStream::connect(addr).await.unwrap();
 
+    let mut rng = rand::thread_rng();
+
+    // 生成一个随机的 u32 数字
+    let random_number: u32 = rng.gen();
+
     let original_msg = BinaryMessage {
         msg_type: 1,
-        msg_id: 2,
+        msg_id: random_number,
         payload: vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
     };
 
     send_message(&mut stream, &original_msg)
         .await
         .expect("Failed to send message");
+
     let response = receive_message(&mut stream)
         .await
         .expect("Failed to read message");
-    //println!("{:?}", response);
+    println!("{:?}", response);
     assert_eq!(response.payload, original_msg.payload);
     assert_eq!(response.msg_type, original_msg.msg_type);
     assert_eq!(response.msg_id, original_msg.msg_id);
-    stream.shutdown().await.expect("Failed to shutdown connection");
+
+    std::thread::sleep(std::time::Duration::new(2, 0)); // 睡眠2秒
+    // stream
+    //     .shutdown()
+    //     .await
+    //     .expect("Failed to shutdown connection");
+    // drop(stream); // 完全关闭连接
+
+    
 }

@@ -33,19 +33,24 @@ impl NetworkServer {
 
             let _ = Arc::clone(&shared_state);
             tokio::spawn(async move {
-                match receive_message(&mut socket).await {
-                    Ok(binary_message) => {
-                        if let Err(e) = send_message(&mut socket, &binary_message).await {
-                            eprintln!("Error sending message: {}", e);
+                loop {
+                    match receive_message(&mut socket).await {
+                        Ok(binary_message) => {
+                            println!("收到消息：{}",binary_message.msg_id);
+                            if let Err(e) = send_message(&mut socket, &binary_message).await {
+                                eprintln!("Error sending message: {}", e);
+                                break;
+                            }
                         }
-                    }
-                    //Err(e) => eprintln!("❌ Failed to receive message: {}", e),
-                    Err(e) => {
-                        // ✅ 客户端断开连接
-                        if e.kind() == ErrorKind::UnexpectedEof || e.kind() == ErrorKind::ConnectionReset {
-                            println!("❌ Client {} disconnected.", addr);
-                        } else {
-                            eprintln!("❌ Failed to receive message: {}", e);
+                        //Err(e) => eprintln!("❌ Failed to receive message: {}", e),
+                        Err(e) => {
+                            // ✅ 客户端断开连接
+                            if e.kind() == ErrorKind::UnexpectedEof || e.kind() == ErrorKind::ConnectionReset {
+                                println!("❌ Client {} disconnected.", addr);
+                            } else {
+                                eprintln!("❌ Failed to receive message: {}", e);
+                            }
+                            break;
                         }
                     }
                 }
