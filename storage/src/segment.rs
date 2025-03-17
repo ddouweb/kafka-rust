@@ -8,25 +8,27 @@ const INDEX_ENTRY_SIZE: usize = OFFSET_SIZE + POS_SIZE; // 每个索引条目 8+
 const MSG_HEADER_SIZE: usize = OFFSET_SIZE + MSG_LEN_SIZE; // 日志条目头部 8+4=12 字节
 
 pub struct LogSegment {
-    log_file: MutexFile,   // 存储实际消息数据
-    index_file: MutexFile, // 存储索引
-    //base_offset: u64,        // 当前段的起始 offset
+    log_file: MutexFile,     // 存储实际消息数据
+    index_file: MutexFile,   // 存储索引
+    base_offset: u64,        // 当前段的起始 offset
     offset: u64,             // 下一个消息的 offset
     max_segment_size: usize, // 单个段的最大大小
 }
 
 impl LogSegment {
-    pub fn new(path: &str, max_segment_size: usize) -> io::Result<Self> {
-        //let start_offset = format!("{:020}", path);
-        let log_file = MutexFile::new(path, "log")?;
-        let index_file = MutexFile::new(path, "index")?;
+    pub fn new(log_dir: &str, base_offset: u64, max_segment_size: usize) -> io::Result<Self> {
+        let start_offset = format!("{:020}", base_offset);
+        let log_file_path = format!("{}/{}", log_dir, start_offset);
+        let index_file_path = format!("{}/{}", log_dir, start_offset);
+        let log_file = MutexFile::new(&log_file_path, "log")?;
+        let index_file = MutexFile::new(&index_file_path, "index")?;
 
         let offset = LogSegment::recover_message_offset(&log_file, &index_file)?;
 
         Ok(Self {
             log_file,
             index_file,
-            //base_offset,
+            base_offset,
             offset,
             max_segment_size,
         })
@@ -133,7 +135,9 @@ impl LogSegment {
 
         while log_file.read_exact(&mut buffer).is_ok() {
             let msg_offset = u64::from_be_bytes(buffer[0..OFFSET_SIZE].try_into().unwrap());
-            let length =   u32::from_be_bytes(buffer[OFFSET_SIZE..MSG_HEADER_SIZE].try_into().unwrap()) as usize;
+            let length =
+                u32::from_be_bytes(buffer[OFFSET_SIZE..MSG_HEADER_SIZE].try_into().unwrap())
+                    as usize;
 
             if msg_offset == offset {
                 let mut message = vec![0u8; length];

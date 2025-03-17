@@ -9,8 +9,7 @@ mod tests {
     #[test]
     fn test_write() {
 
-        let path = "log";
-        let mut log: LogSegment = LogSegment::new(path, 10000).unwrap();
+        let mut log: LogSegment = LogSegment::new("e:/logs/",0, 1024).unwrap();
 
         let msg1 = b"Hello, Kafka!";
         let msg2 = b"Another message";
@@ -47,13 +46,13 @@ mod tests {
         let message2 = log.read_message(msg_no2).unwrap();
         assert_eq!(message2, Some(msg2.to_vec()));
 
-        std::fs::remove_file("log.log").unwrap();
-        std::fs::remove_file("log.index").unwrap();
+        //std::fs::remove_file("log.log").unwrap();
+        //std::fs::remove_file("log.index").unwrap();
     }
 
-    //#[test]
+    #[test]
     fn test_storage_read_all_messages() {
-        let mut segment = LogSegment::new("logs/00000000000000000000", 1024 * 1024).unwrap();
+        let mut segment = LogSegment::new("e:/logs/",0, 1024).unwrap();
         segment.append_message(b"Hello, Kafka!").unwrap();
 
         if let Some(msg) = segment.read_message(0).unwrap() {
