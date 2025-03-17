@@ -34,7 +34,18 @@ impl LogSegment {
         })
     }
 
+    pub fn rotate_segment(&mut self) -> io::Result<()> {
+        let new_segment = Self::new("logs", self.max_segment_size as u64,self.max_segment_size*2)?; // `Self::new()` 更通用
+        *self = new_segment;
+        Ok(())
+    }
+
     pub fn append_message(&mut self, message: &[u8]) -> io::Result<u64> {
+
+        if self.log_file.lock().metadata()?.len() as usize >= self.max_segment_size {
+            self.rotate_segment()?;
+        }
+
         let mut log_file = self.log_file.lock();
         let mut index_file = self.index_file.lock();
 
@@ -42,10 +53,6 @@ impl LogSegment {
         let length_bytes = (message.len() as u32).to_be_bytes();
         let log_pos = log_file.metadata()?.len();
         let log_pos_bytes = log_pos.to_be_bytes();
-
-        if log_pos as usize >= self.max_segment_size {
-            return Err(io::Error::new(io::ErrorKind::Other, "Segment full"));
-        }
 
         log_file.write_all(&offset_bytes)?;
         log_file.write_all(&length_bytes)?;

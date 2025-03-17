@@ -9,7 +9,7 @@ mod tests {
     #[test]
     fn test_write() {
 
-        let mut log: LogSegment = LogSegment::new("e:/logs/",0, 1024).unwrap();
+        let mut log: LogSegment = LogSegment::new("logs/",0, 1024).unwrap();
 
         let msg1 = b"Hello, Kafka!";
         let msg2 = b"Another message";
@@ -50,15 +50,13 @@ mod tests {
         //std::fs::remove_file("log.index").unwrap();
     }
 
-    #[test]
     fn test_storage_read_all_messages() {
-        let mut segment = LogSegment::new("e:/logs/",0, 1024).unwrap();
+        let mut segment = LogSegment::new("logs/",0, 1024).unwrap();
         segment.append_message(b"Hello, Kafka!").unwrap();
 
         if let Some(msg) = segment.read_message(0).unwrap() {
             println!("Read message: {:?}", String::from_utf8_lossy(&msg));
         }
-
         retention::clean_old_segments("logs/".to_string());
     }
 }
