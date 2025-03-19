@@ -17,14 +17,35 @@ pub struct LogSegment {
 
 impl LogSegment {
     pub fn new(log_dir: &str, base_offset: u64, max_segment_size: usize) -> io::Result<Self> {
+        Self::with_offset(log_dir, base_offset, max_segment_size, None)
+    }
+
+    pub fn with_offset(
+        log_dir: &str,
+        base_offset: u64,
+        max_segment_size: usize,
+        offset: Option<u64>,
+    ) -> io::Result<Self> {
+        let log_dir = log_dir.trim_end_matches('/');
+        if !std::path::Path::new(log_dir).exists() {
+            std::fs::create_dir_all(log_dir)?;
+        }
         let start_offset = format!("{:020}", base_offset);
         let log_file_path = format!("{}/{}", log_dir, start_offset);
         let index_file_path = format!("{}/{}", log_dir, start_offset);
         let log_file = MutexFile::new(&log_file_path, "log")?;
         let index_file = MutexFile::new(&index_file_path, "index")?;
 
-        let offset = LogSegment::recover_message_offset(&log_file, &index_file)?;
+        //let offset: u64 = Self::recover_message_offset(&log_file, &index_file)?;
+        // 如果指定了 offset，则直接使用；否则调用 recover_message_offset 恢复 offset
+        let offset = match offset {
+            Some(offset) => offset,
+            None => Self::recover_message_offset(&log_file, &index_file)?,
+        };
 
+        println!("LogSegment::new base_offset:{}", base_offset);
+        println!("LogSegment::new offset:{}", offset);
+        println!("LogSegment::new max_segment_size:{}", max_segment_size);
         Ok(Self {
             log_file,
             index_file,
@@ -34,14 +55,17 @@ impl LogSegment {
         })
     }
 
+    //创建一个新的段，并替换当前段
     pub fn rotate_segment(&mut self) -> io::Result<()> {
-        let new_segment = Self::new("logs", self.max_segment_size as u64,self.max_segment_size*2)?; // `Self::new()` 更通用
+        // 确保当前段的数据已经写入磁盘
+        self.index_file.lock().flush()?;
+        self.log_file.lock().flush()?;
+        let new_segment = Self::with_offset("logs", self.offset, self.max_segment_size, Some(self.offset))?;
         *self = new_segment;
         Ok(())
     }
 
     pub fn append_message(&mut self, message: &[u8]) -> io::Result<u64> {
-
         if self.log_file.lock().metadata()?.len() as usize >= self.max_segment_size {
             self.rotate_segment()?;
         }
