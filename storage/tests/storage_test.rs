@@ -8,12 +8,43 @@ mod tests {
 
     #[test]
     fn test(){
-        let mut log: LogSegment = LogSegment::new("logs", 0, 100).unwrap();    
-        for _ in 1..300  {
-            test_write_times(&mut log);
+        let mut log: LogSegment = LogSegment::new("logs", 0, 1024*1024).unwrap();    
+        for _ in 1..300000  {
+            test_read_times(&mut log);
         }
     }
+    fn test_read_times(log: &mut LogSegment) {
+        for offset in 1..300000  {
+            let message = log.read_message(offset).unwrap();
+            println!("offset:{} is : {:?}",offset,option_vec_u8_to_string(message));
+        }
+    }
+
+    fn option_vec_u8_to_string(input: Option<Vec<u8>>) -> Option<String> {
+        input.map(|vec| String::from_utf8_lossy(&vec).to_string())
+    }
+
     fn test_write_times(log: &mut LogSegment) {
+        
+
+        let msg1 = b"ABCDEFGHIJKLMNOPQRSTUVWXYZ1";
+        let msg2 = b"QWERTYUIOPASDFGHJKLZXCVBNM22";
+        let msg3 = b"1234567890123456789012345678XXX";
+
+        // let msg1 = b"123";
+        // let msg2 = b"456";
+        // let msg3 = b"789";
+
+        let offset1 = log.append_message(msg1).unwrap();
+        let offset2 = log.append_message(msg2).unwrap();
+        let offset3 = log.append_message(msg3).unwrap();
+
+        println!("offset1: {}", offset1);
+        println!("offset2: {}", offset2);
+        println!("offset3: {}", offset3);
+
+    }
+    fn test_read_write_times(log: &mut LogSegment) {
         
 
         let msg1 = b"ABCDEFGHIJKLMNOPQRSTUVWXYZ1";
@@ -34,13 +65,13 @@ mod tests {
 
         let message1 = log.read_message(offset1).unwrap();
 
-        //assert_eq!(message1, Some(msg1.to_vec()));
+        assert_eq!(message1, Some(msg1.to_vec()));
 
         let message2 = log.read_message(offset2).unwrap();
-        //assert_eq!(message2, Some(msg2.to_vec()));
+        assert_eq!(message2, Some(msg2.to_vec()));
 
         let message3 = log.read_message(offset3).unwrap();
-        //assert_eq!(message3, Some(msg3.to_vec()));
+        assert_eq!(message3, Some(msg3.to_vec()));
 
     }
 

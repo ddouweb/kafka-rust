@@ -82,11 +82,14 @@ impl LogSegment {
         log_file.write_all(&length_bytes)?;
         log_file.write_all(message)?;
 
-        log_file.flush()?; // ✅ 这里不立即 flush，避免频繁写入影响性能
+        //log_file.flush()?; // ✅ 这里不立即 flush，避免频繁写入影响性能
 
-        index_file.write_all(&offset_bytes)?;
-        index_file.write_all(&log_pos_bytes)?;
-        index_file.flush()?; // ✅ 这里不立即 flush，避免频繁写入影响性能
+        if self.offset%1000==0 {
+            index_file.write_all(&offset_bytes)?;
+            index_file.write_all(&log_pos_bytes)?;
+            //index_file.flush()?; // ✅ 这里不立即 flush，避免频繁写入影响性能
+        }
+        
         let offset = self.offset; //相对偏移量（8 字节，相对于基准偏移量）
         self.offset += 1;
         Ok(offset)
