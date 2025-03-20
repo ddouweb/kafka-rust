@@ -14,7 +14,7 @@ impl MmapIndex {
     }
 
     /// **查找目标 offset 对应的日志文件位置**
-    pub fn find_offset(&self, target_offset: u64) -> Option<u64> {
+    pub fn find_position(&self, target_offset: u64) -> Option<u64> {
 
         let index_size = self.mmap.len();
         if index_size == 0 {

@@ -2,11 +2,11 @@ use crate::concurrency::MutexFile;
 use crate::mmap::MmapIndex;
 use std::io::{self, Read, Seek, SeekFrom, Write};
 
-use super::{OFFSET_SIZE,INDEX_ENTRY_SIZE,POS_SIZE,MSG_HEADER_SIZE};
+use super::{INDEX_ENTRY_SIZE, MSG_HEADER_SIZE, OFFSET_SIZE, POS_SIZE};
 pub struct LogSegment {
     log_file: MutexFile,     // 存储实际消息数据
     index_file: MutexFile,   // 存储索引
-    mmap_index: MmapIndex,       // 存储索引,使用mmap
+    mmap_index: MmapIndex,   // 存储索引,使用mmap
     base_offset: u64,        // 当前段的起始 offset
     offset: u64,             // 下一个消息的 offset
     max_segment_size: usize, // 单个段的最大大小
@@ -41,9 +41,6 @@ impl LogSegment {
             None => Self::recover_message_offset(&log_file, &index_file)?,
         };
 
-        println!("LogSegment::new base_offset:{}", base_offset);
-        println!("LogSegment::new offset:{}", offset);
-        println!("LogSegment::new max_segment_size:{}", max_segment_size);
         Ok(Self {
             log_file,
             index_file,
@@ -55,11 +52,16 @@ impl LogSegment {
     }
 
     //创建一个新的段，并替换当前段
-    pub fn rotate_segment(&mut self) -> io::Result<()> {
+    fn rotate_segment(&mut self) -> io::Result<()> {
         // 确保当前段的数据已经写入磁盘
         self.index_file.lock().flush()?;
         self.log_file.lock().flush()?;
-        let new_segment = Self::with_offset("logs", self.offset, self.max_segment_size, Some(self.offset))?;
+        let new_segment = Self::with_offset(
+            "logs",
+            self.offset,
+            self.max_segment_size,
+            Some(self.offset),
+        )?;
         *self = new_segment;
         Ok(())
     }
@@ -83,12 +85,12 @@ impl LogSegment {
 
         //log_file.flush()?; // ✅ 这里不立即 flush，避免频繁写入影响性能,
 
-        if self.offset%1000==0 {
+        if self.offset % 10 == 0 {
             index_file.write_all(&offset_bytes)?;
             index_file.write_all(&log_pos_bytes)?;
-            index_file.flush()?; // ✅ 这里不立即 flush，避免频繁写入影响性能 不立即flush,好像mmap获取不到信息？
+            //index_file.flush()?; // ✅ 这里不立即 flush，避免频繁写入影响性能 不立即flush,好像mmap获取不到信息？
         }
-        
+
         let offset = self.offset; //相对偏移量（8 字节，相对于基准偏移量）
         self.offset += 1;
         Ok(offset)
@@ -128,18 +130,20 @@ impl LogSegment {
 
     /// 读取指定 offset 的消息    
     pub fn read_message(&mut self, offset: u64) -> io::Result<Option<Vec<u8>>> {
-        if let Some(position) = self.mmap_index.find_offset(offset) {
-            let mut log_file = self.log_file.lock();
+         let pos =  match self.mmap_index.find_position(offset){
+            Some(pos) => pos,
+            None => 0, //mmap不回记录所有的消息坐标。可能会返回None,属于合理情况
+        };
+        let mut log_file = self.log_file.lock();
+            if pos >= log_file.metadata()?.len() {
+                return Ok(None);
+            }
             // **遍历日志文件，找到目标 offset**
-            log_file.seek(SeekFrom::Start(position))?;
+            log_file.seek(SeekFrom::Start(pos))?;
             let mut buffer = [0u8; MSG_HEADER_SIZE];
-    
             while log_file.read_exact(&mut buffer).is_ok() {
                 let msg_offset = u64::from_be_bytes(buffer[0..OFFSET_SIZE].try_into().unwrap());
-                let length =
-                    u32::from_be_bytes(buffer[OFFSET_SIZE..MSG_HEADER_SIZE].try_into().unwrap())
-                        as usize;
-    
+                let length =   u32::from_be_bytes(buffer[OFFSET_SIZE..MSG_HEADER_SIZE].try_into().unwrap()) as usize;
                 if msg_offset == offset {
                     let mut message = vec![0u8; length];
                     log_file.read_exact(&mut message)?;
@@ -147,9 +151,6 @@ impl LogSegment {
                 }
                 log_file.seek(SeekFrom::Current(length as i64))?;
             }
-        }else {
-            return Ok(None);
-        }
         Ok(None) // 没有找到
     }
 }

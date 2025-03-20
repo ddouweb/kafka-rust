@@ -10,10 +10,10 @@ mod tests {
     fn test() {
         let mut log: LogSegment = LogSegment::new("logs", 0, 1024 * 1024).unwrap();
         test_read_write_times(&mut log);
-        for _ in 1..30 {
+        for _ in 1..300 {
             test_read_write_times(&mut log);
         }
-        for _ in 1..30 {
+        for _ in 1..300 {
             test_write_times(&mut log);
         }
         for offset in 0..601 {
