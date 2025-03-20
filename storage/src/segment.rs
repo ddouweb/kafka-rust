@@ -1,7 +1,7 @@
 use crate::concurrency::MutexFile;
 use crate::mmap::MmapIndex;
 use std::io::{self, Read, Seek, SeekFrom, Write};
-
+use std::sync::atomic::Ordering;
 use super::{INDEX_ENTRY_SIZE, MSG_HEADER_SIZE, OFFSET_SIZE, POS_SIZE};
 pub struct LogSegment {
     log_file: MutexFile,     // 存储实际消息数据
@@ -28,10 +28,10 @@ impl LogSegment {
             std::fs::create_dir_all(log_dir)?;
         }
         let start_offset = format!("{:020}", base_offset);
-        let log_file_path = format!("{}/{}", log_dir, start_offset);
-        let index_file_path = format!("{}/{}", log_dir, start_offset);
-        let log_file = MutexFile::new(&log_file_path, "log")?;
-        let index_file = MutexFile::new(&index_file_path, "index")?;
+        let log_file_path = format!("{}/{}.log", log_dir, start_offset);
+        let index_file_path = format!("{}/{}.index", log_dir, start_offset);
+        let log_file = MutexFile::new(&log_file_path)?;
+        let index_file = MutexFile::new(&index_file_path)?;
         let mmap_index = MmapIndex::new(&index_file.lock())?;
 
         //let offset: u64 = Self::recover_message_offset(&log_file, &index_file)?;
@@ -70,25 +70,34 @@ impl LogSegment {
         if self.log_file.lock().metadata()?.len() as usize >= self.max_segment_size {
             self.rotate_segment()?;
         }
+        let offset_bytes = self.offset.to_be_bytes();
 
         let mut log_file = self.log_file.lock();
         let mut index_file = self.index_file.lock();
 
-        let offset_bytes = self.offset.to_be_bytes();
-        let length_bytes = (message.len() as u32).to_be_bytes();
         let log_pos = log_file.metadata()?.len();
         let log_pos_bytes = log_pos.to_be_bytes();
 
-        log_file.write_all(&offset_bytes)?;
-        log_file.write_all(&length_bytes)?;
-        log_file.write_all(message)?;
+        let mut buffer = vec![];
+        buffer.extend_from_slice(&offset_bytes);
+        buffer.extend_from_slice(&(message.len() as u32).to_be_bytes());
+        buffer.extend_from_slice(message);
+        log_file.write_all(&buffer)?;
+
+        // log_file.write_all(&offset_bytes)?;
+        // log_file.write_all(&(message.len() as u32).to_be_bytes())?;
+        // log_file.write_all(message)?;
 
         //log_file.flush()?; // ✅ 这里不立即 flush，避免频繁写入影响性能,
 
-        if self.offset % 10 == 0 {
+
+        if self.offset % 100 == 0 { // 每 100 条消息强制刷盘
+            log_file.flush()?;  
+
             index_file.write_all(&offset_bytes)?;
             index_file.write_all(&log_pos_bytes)?;
-            //index_file.flush()?; // ✅ 这里不立即 flush，避免频繁写入影响性能 不立即flush,好像mmap获取不到信息？
+            index_file.flush()?;
+            self.mmap_index = MmapIndex::new(&index_file)?; // 重新映射 mmap
         }
 
         let offset = self.offset; //相对偏移量（8 字节，相对于基准偏移量）
@@ -130,27 +139,70 @@ impl LogSegment {
 
     /// 读取指定 offset 的消息    
     pub fn read_message(&mut self, offset: u64) -> io::Result<Option<Vec<u8>>> {
-         let pos =  match self.mmap_index.find_position(offset){
+        let pos = match self.mmap_index.find_position(offset) {
             Some(pos) => pos,
-            None => 0, //mmap不回记录所有的消息坐标。可能会返回None,属于合理情况
+            None => {
+                if self.offset > 1000 {
+                    self.mmap_index
+                        .find_position(self.offset - 1000)
+                        .unwrap_or(0) //如果 mmap_index 里没有找到 offset，从 0 位置开始查找可能会导致全文件扫描，影响性能。
+                } else {
+                    0
+                }
+            }
         };
         let mut log_file = self.log_file.lock();
-            if pos >= log_file.metadata()?.len() {
-                return Ok(None);
+        if pos >= log_file.metadata()?.len() {
+            return Ok(None);
+        }
+        // **遍历日志文件，找到目标 offset**
+        log_file.seek(SeekFrom::Start(pos))?;
+        let mut buffer = [0u8; MSG_HEADER_SIZE];
+        while log_file.read_exact(&mut buffer).is_ok() {
+            let msg_offset = u64::from_be_bytes(buffer[0..OFFSET_SIZE].try_into().unwrap());
+            let length =
+                u32::from_be_bytes(buffer[OFFSET_SIZE..MSG_HEADER_SIZE].try_into().unwrap())
+                    as usize;
+            if msg_offset == offset {
+                let mut message = vec![0u8; length];
+                log_file.read_exact(&mut message)?;
+                return Ok(Some(message));
             }
-            // **遍历日志文件，找到目标 offset**
-            log_file.seek(SeekFrom::Start(pos))?;
-            let mut buffer = [0u8; MSG_HEADER_SIZE];
-            while log_file.read_exact(&mut buffer).is_ok() {
-                let msg_offset = u64::from_be_bytes(buffer[0..OFFSET_SIZE].try_into().unwrap());
-                let length =   u32::from_be_bytes(buffer[OFFSET_SIZE..MSG_HEADER_SIZE].try_into().unwrap()) as usize;
-                if msg_offset == offset {
-                    let mut message = vec![0u8; length];
-                    log_file.read_exact(&mut message)?;
-                    return Ok(Some(message));
-                }
-                log_file.seek(SeekFrom::Current(length as i64))?;
-            }
+            log_file.seek(SeekFrom::Current(length as i64))?;
+        }
         Ok(None) // 没有找到
     }
+
+    // 清理旧的段
+    // pub fn cleanup_old_segments(&mut self, max_size: u64, max_age_secs: u64) -> io::Result<()> {
+    //     let log_dir = std::fs::read_dir("logs")?;
+    //     let mut total_size = 0;
+    //     let now = SystemTime::now();
+
+    //     let mut segments: Vec<(u64, PathBuf, Metadata)> = log_dir.filter_map(|entry| {
+    //         let entry = entry.ok()?;
+    //         let metadata = entry.metadata().ok()?;
+    //         let name = entry.file_name().into_string().ok()?;
+    //         let offset = name.parse::<u64>().ok()?;
+    //         Some((offset, entry.path(), metadata))
+    //     }).collect();
+
+    //     segments.sort_by_key(|s| s.0); // 按 offset 递增排序
+
+    //     for (offset, path, metadata) in segments {
+    //         total_size += metadata.len();
+    //         if total_size > max_size || metadata.modified()?.elapsed().unwrap().as_secs() > max_age_secs {
+    //             std::fs::remove_file(path)?;
+    //             println!("Deleted old segment: {:?}", path);
+    //         }
+    //     }
+
+    //     Ok(())
+    // }
+
+    //返回全局唯一的offset
+    pub fn get_next_offset() -> u64 {
+        super::GLOBAL_OFFSET.fetch_add(1, Ordering::SeqCst)
+    }
+
 }

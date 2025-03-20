@@ -19,3 +19,4 @@ docker buildx build \
   -t app .
 
   #test  cargo test -p storage -- --nocapture
+  #ttest rd /s /q "storage/logs" && cargo build && cargo test -p storage -- --nocapture

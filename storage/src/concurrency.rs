@@ -6,10 +6,9 @@ pub struct MutexFile {
 }
 
 impl MutexFile {
-    pub fn new(path: &str, ext: &str) -> std::io::Result<Self> {
-        let file_path = format!("{}.{}", path, ext);
+    pub fn new(path: &str) -> std::io::Result<Self> {
         //println!("file_path:{}",file_path.clone().to_string());
-        let file = OpenOptions::new().create(true).append(true).read(true).open(file_path)?;
+        let file = OpenOptions::new().create(true).append(true).read(true).open(path)?;
         Ok(Self {
             file: Arc::new(Mutex::new(file)),
         })

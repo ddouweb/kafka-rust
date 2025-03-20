@@ -20,6 +20,13 @@ mod tests {
             test_read_times(&mut log, offset);
         }
         test_storage_read_all_messages();
+        test_id();
+    }
+    fn test_id() {
+        for _ in 1..10 {
+            let id = LogSegment::get_next_offset();
+            eprintln!("id:{}", id);
+        }
     }
     fn test_read_times(log: &mut LogSegment, offset: u64) {
         let message = log.read_message(offset).unwrap();
