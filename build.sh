@@ -17,3 +17,5 @@ echo "构建支持的平台: $PLATFORMS"
 docker buildx build \
   --platform $PLATFORMS \
   -t app .
+
+  #test  cargo test -p storage -- --nocapture

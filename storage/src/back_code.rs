@@ -92,51 +92,59 @@ impl LogSegment {
 
     /// 读取指定 offset 的消息    
     pub fn read_message(&mut self, offset: u64) -> io::Result<Option<Vec<u8>>> {
-        let index_size = self.index_file.metadata()?.len();
-    
+        let mut index_file = self.index_file.lock();
+        let index_size = index_file.metadata()?.len();
+
         if index_size == 0 {
             return Ok(None);
         }
-    
+
         // **遍历索引文件，找到最近的偏移量**
         let mut closest_offset = 0;
         let mut closest_pos = 0;
         let mut index_buffer = [0u8; INDEX_ENTRY_SIZE];
-    
-        self.index_file.seek(SeekFrom::Start(0))?;
-        while self.index_file.read_exact(&mut index_buffer).is_ok() {
-            let stored_offset = u64::from_be_bytes(index_buffer[0..OFFSET_SIZE].try_into().unwrap());
-            let log_pos = u64::from_be_bytes(index_buffer[OFFSET_SIZE..INDEX_ENTRY_SIZE].try_into().unwrap());
-    
+
+        index_file.seek(SeekFrom::Start(0))?;
+        while index_file.read_exact(&mut index_buffer).is_ok() {
+            let stored_offset =
+                u64::from_be_bytes(index_buffer[0..OFFSET_SIZE].try_into().unwrap());
+            let log_pos = u64::from_be_bytes(
+                index_buffer[OFFSET_SIZE..INDEX_ENTRY_SIZE]
+                    .try_into()
+                    .unwrap(),
+            );
+
             if stored_offset > offset {
                 break; // 取最近的小于等于 offset 的条目
             }
-    
+
             closest_offset = stored_offset;
             closest_pos = log_pos;
         }
-    
+
         if closest_offset > offset {
             return Ok(None);
         }
-    
+        let mut log_file = self.log_file.lock();
         // **遍历日志文件，找到目标 offset**
-        self.log_file.seek(SeekFrom::Start(closest_pos))?;
+        log_file.seek(SeekFrom::Start(closest_pos))?;
         let mut buffer = [0u8; MSG_HEADER_SIZE];
-    
-        while self.log_file.read_exact(&mut buffer).is_ok() {
+
+        while log_file.read_exact(&mut buffer).is_ok() {
             let msg_offset = u64::from_be_bytes(buffer[0..OFFSET_SIZE].try_into().unwrap());
-            let length = u32::from_be_bytes(buffer[OFFSET_SIZE..MSG_HEADER_SIZE].try_into().unwrap()) as usize;
-    
+            let length =
+                u32::from_be_bytes(buffer[OFFSET_SIZE..MSG_HEADER_SIZE].try_into().unwrap())
+                    as usize;
+
             if msg_offset == offset {
                 let mut message = vec![0u8; length];
-                self.log_file.read_exact(&mut message)?;
+                log_file.read_exact(&mut message)?;
                 return Ok(Some(message));
             }
-    
-            self.log_file.seek(SeekFrom::Current(length as i64))?;
+
+            log_file.seek(SeekFrom::Current(length as i64))?;
         }
-    
+
         Ok(None) // 没有找到
     }
     
