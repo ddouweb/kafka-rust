@@ -13,6 +13,22 @@ impl MmapIndex {
         Ok(Self { mmap })
     }
 
+    pub fn last_entry(&self) -> Option<(u64,u64)> {
+        let index_len = self.mmap.len();
+        if index_len < INDEX_ENTRY_SIZE {
+            return None; // 索引为空
+        }
+
+        // 获取最后 16 字节 (8 字节 offset + 8 字节 pos)
+        let last_offset_bytes = self.mmap.get(index_len - INDEX_ENTRY_SIZE..index_len - POS_SIZE)?;
+        let last_pos_bytes = self.mmap.get(index_len - POS_SIZE..)?;
+
+        let last_offset = u64::from_be_bytes(last_offset_bytes.try_into().ok()?);
+        let last_pos = u64::from_be_bytes(last_pos_bytes.try_into().ok()?);
+
+        Some((last_offset, last_pos))
+    }
+
     /// **查找目标 offset 对应的日志文件位置**
     pub fn find_position(&self, target_offset: u64) -> Option<u64> {
 
@@ -73,4 +89,6 @@ impl MmapIndex {
             None
         }
     }
+    
+    
 }

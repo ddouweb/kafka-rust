@@ -38,7 +38,7 @@ impl LogSegment {
         // 如果指定了 offset，则直接使用；否则调用 recover_message_offset 恢复 offset
         let offset = match offset {
             Some(offset) => offset,
-            None => Self::recover_message_offset(&log_file, &index_file)?,
+            None => Self::recover_message_offset(&log_file, &mmap_index)?,
         };
 
         Ok(Self {
@@ -106,25 +106,11 @@ impl LogSegment {
     }
 
     // * 恢复消息偏移量
-    fn recover_message_offset(log_file: &MutexFile, index_file: &MutexFile) -> io::Result<u64> {
+    fn recover_message_offset(log_file: &MutexFile, mmap_index: &MmapIndex) -> io::Result<u64> {
+        
         let mut log_file = log_file.lock(); // 解锁获取 File
-        let mut index_file = index_file.lock();
 
-        let index_size = index_file.metadata()?.len();
-        if index_size < INDEX_ENTRY_SIZE as u64 {
-            return Ok(0);
-        }
-        let mut last_offset = 0;
-        let mut last_pos = 0;
-
-        if index_size >= INDEX_ENTRY_SIZE as u64 {
-            let mut buffer = [0u8; POS_SIZE];
-            let last_offset_pos = index_size - INDEX_ENTRY_SIZE as u64 + OFFSET_SIZE as u64; // 8 字节 offset + 8 字节长度
-            index_file.seek(SeekFrom::Start(last_offset_pos))?;
-            index_file.read_exact(&mut buffer)?;
-            //last_offset = u64::from_be_bytes(buffer[0..OFFSET_SIZE].try_into().unwrap());
-            last_pos = u64::from_be_bytes(buffer); //定位到index的最大pos
-        }
+        let (mut last_offset, last_pos) = mmap_index.last_entry().unwrap_or((0, 0));
 
         log_file.seek(SeekFrom::Start(last_pos))?;
         let mut buffer = [0u8; MSG_HEADER_SIZE]; // 8 字节消息号 + 4 字节长度
