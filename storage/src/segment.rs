@@ -2,7 +2,7 @@ use crate::concurrency::MutexFile;
 use crate::mmap::MmapIndex;
 use std::io::{self, Read, Seek, SeekFrom, Write};
 use std::sync::atomic::Ordering;
-use super::{INDEX_ENTRY_SIZE, MSG_HEADER_SIZE, OFFSET_SIZE, POS_SIZE};
+use super::{MSG_HEADER_SIZE, OFFSET_SIZE, INDEX_FILE_SUFFIX,LOG_FILE_SUFFIX};
 pub struct LogSegment {
     log_file: MutexFile,     // 存储实际消息数据
     index_file: MutexFile,   // 存储索引
@@ -28,8 +28,8 @@ impl LogSegment {
             std::fs::create_dir_all(log_dir)?;
         }
         let start_offset = format!("{:020}", base_offset);
-        let log_file_path = format!("{}/{}.log", log_dir, start_offset);
-        let index_file_path = format!("{}/{}.index", log_dir, start_offset);
+        let log_file_path = format!("{}/{}{}", log_dir, start_offset,LOG_FILE_SUFFIX);
+        let index_file_path = format!("{}/{}{}", log_dir, start_offset,INDEX_FILE_SUFFIX);
         let log_file = MutexFile::new(&log_file_path)?;
         let index_file = MutexFile::new(&index_file_path)?;
         let mmap_index = MmapIndex::new(&index_file.lock())?;
@@ -51,29 +51,18 @@ impl LogSegment {
         })
     }
 
-    //创建一个新的段，并替换当前段
-    fn rotate_segment(&mut self) -> io::Result<()> {
-        // 确保当前段的数据已经写入磁盘
-        self.index_file.lock().flush()?;
-        self.log_file.lock().flush()?;
-        let new_segment = Self::with_offset(
-            "logs",
-            self.offset,
-            self.max_segment_size,
-            Some(self.offset),
-        )?;
-        *self = new_segment;
-        Ok(())
-    }
-
     pub fn append_message(&mut self, message: &[u8]) -> io::Result<u64> {
-        if self.log_file.lock().metadata()?.len() as usize >= self.max_segment_size {
-            self.rotate_segment()?;
-        }
-        let offset_bytes = self.offset.to_be_bytes();
-
         let mut log_file = self.log_file.lock();
         let mut index_file = self.index_file.lock();
+        if self.log_file.lock().metadata()?.len() as usize >= self.max_segment_size {
+            log_file.flush()?;
+            index_file.flush()?;
+            self.mmap_index = MmapIndex::new(&index_file)?;
+            return Err(io::Error::new(io::ErrorKind::Other, "Segment full")); //抛出错误，让queue处理
+            // 由queue 来管理日志扩容的情况 self.rotate_segment()?;
+        }
+        let offset_bytes = self.offset.to_be_bytes();
+        
 
         let log_pos = log_file.metadata()?.len();
         let log_pos_bytes = log_pos.to_be_bytes();
@@ -83,13 +72,6 @@ impl LogSegment {
         buffer.extend_from_slice(&(message.len() as u32).to_be_bytes());
         buffer.extend_from_slice(message);
         log_file.write_all(&buffer)?;
-
-        // log_file.write_all(&offset_bytes)?;
-        // log_file.write_all(&(message.len() as u32).to_be_bytes())?;
-        // log_file.write_all(message)?;
-
-        //log_file.flush()?; // ✅ 这里不立即 flush，避免频繁写入影响性能,
-
 
         if self.offset % 100 == 0 { // 每 100 条消息强制刷盘
             log_file.flush()?;  
@@ -186,9 +168,28 @@ impl LogSegment {
     //     Ok(())
     // }
 
-    //返回全局唯一的offset
-    pub fn get_next_offset() -> u64 {
-        super::GLOBAL_OFFSET.fetch_add(1, Ordering::SeqCst)
+    //创建一个新的段，并替换当前段
+    // fn rotate_segment(&mut self) -> io::Result<()> {
+    //     // 确保当前段的数据已经写入磁盘
+    //     self.index_file.lock().flush()?;
+    //     self.log_file.lock().flush()?;
+    //     let new_segment = Self::with_offset(
+    //         "logs",
+    //         self.offset,
+    //         self.max_segment_size,
+    //         Some(self.offset),
+    //     )?;
+    //     *self = new_segment;
+    //     Ok(())
+    // }
+
+    pub fn get_next_offset(&self) -> u64 {
+        self.offset
     }
+
+    // //返回全局唯一的offset
+    // pub fn get_next_offset() -> u64 {
+    //     super::GLOBAL_OFFSET.fetch_add(1, Ordering::SeqCst)
+    // }
 
 }
