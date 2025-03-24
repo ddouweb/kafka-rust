@@ -1,4 +1,5 @@
 use storage::LogSegment;
+use storage::io_result::IoResult;
 #[cfg(test)]
 mod tests {
 
@@ -44,37 +45,54 @@ mod tests {
         // let msg2 = b"456";
         // let msg3 = b"789";
 
-        let offset1 = log.append_message(msg1).unwrap();
-        let offset2 = log.append_message(msg2).unwrap();
-        let offset3 = log.append_message(msg3).unwrap();
-
-        eprintln!("offset1: {}", offset1);
-        eprintln!("offset2: {}", offset2);
-        eprintln!("offset3: {}", offset3);
+        log.append_message(msg1).unwrap();
+        log.append_message(msg2).unwrap();
+        log.append_message(msg3).unwrap();
     }
     fn test_read_write_times(log: &mut LogSegment) {
         let msg1 = b"ABCDEFGHIJKLMNOPQRSTUVWXYZ1";
         let msg2 = b"QWERTYUIOPASDFGHJKLZXCVBNM22";
         let msg3 = b"1234567890123456789012345678XXX";
 
-        // let msg1 = b"123";
-        // let msg2 = b"456";
-        // let msg3 = b"789";
+        match log.append_message(msg1) {
+            Ok(IoResult::Success(offset)) => {
+                let message = log.read_message(offset).unwrap();
+                assert_eq!(message, Some(msg1.to_vec()));
+            },
+            Ok(IoResult::SegmentFull) => {
+                println!("SegmentFull");
+            },
+            Err(e) =>{
+                panic!("Error: {}, {}",e.kind(),e.to_string());
+            }
+        };
 
-        let offset1 = log.append_message(msg1).unwrap();
-        eprintln!("offset1: {}", offset1);
-        let message1 = log.read_message(offset1).unwrap();
-        assert_eq!(message1, Some(msg1.to_vec()));
+        match log.append_message(msg2) {
+            Ok(IoResult::Success(offset)) => {
+                let message = log.read_message(offset).unwrap();
+                assert_eq!(message, Some(msg2.to_vec()));
+            },
+            Ok(IoResult::SegmentFull) => {
+                println!("SegmentFull");
+            },
+            Err(e) =>{
+                panic!("Error: {}, {}",e.kind(),e.to_string());
+            }
+        };
 
-        let offset2 = log.append_message(msg2).unwrap();
-        eprintln!("offset2: {}", offset2);
-        let message2 = log.read_message(offset2).unwrap();
-        assert_eq!(message2, Some(msg2.to_vec()));
-
-        let offset3 = log.append_message(msg3).unwrap();
-        eprintln!("offset3: {}", offset3);
-        let message3 = log.read_message(offset3).unwrap();
-        assert_eq!(message3, Some(msg3.to_vec()));
+        match log.append_message(msg3) {
+            Ok(IoResult::Success(offset)) => {
+                let message = log.read_message(offset).unwrap();
+                assert_eq!(message, Some(msg3.to_vec()));
+            },
+            Ok(IoResult::SegmentFull) => {
+                println!("SegmentFull");
+            },
+            Err(e) =>{
+                panic!("Error: {}, {}",e.kind(),e.to_string());
+            }
+        };
+        
     }
 
     fn test_storage_read_all_messages() {

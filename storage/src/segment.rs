@@ -1,8 +1,9 @@
+use super::{INDEX_FILE_SUFFIX, LOG_FILE_SUFFIX, MSG_HEADER_SIZE, OFFSET_SIZE};
 use crate::concurrency::MutexFile;
+use crate::io_result::IoResult;
 use crate::mmap::MmapIndex;
 use std::io::{self, Read, Seek, SeekFrom, Write};
 use std::sync::atomic::Ordering;
-use super::{MSG_HEADER_SIZE, OFFSET_SIZE, INDEX_FILE_SUFFIX,LOG_FILE_SUFFIX};
 pub struct LogSegment {
     log_file: MutexFile,     // 存储实际消息数据
     index_file: MutexFile,   // 存储索引
@@ -28,8 +29,8 @@ impl LogSegment {
             std::fs::create_dir_all(log_dir)?;
         }
         let start_offset = format!("{:020}", base_offset);
-        let log_file_path = format!("{}/{}{}", log_dir, start_offset,LOG_FILE_SUFFIX);
-        let index_file_path = format!("{}/{}{}", log_dir, start_offset,INDEX_FILE_SUFFIX);
+        let log_file_path = format!("{}/{}{}", log_dir, start_offset, LOG_FILE_SUFFIX);
+        let index_file_path = format!("{}/{}{}", log_dir, start_offset, INDEX_FILE_SUFFIX);
         let log_file = MutexFile::new(&log_file_path)?;
         let index_file = MutexFile::new(&index_file_path)?;
         let mmap_index = MmapIndex::new(&index_file.lock())?;
@@ -51,45 +52,42 @@ impl LogSegment {
         })
     }
 
-    pub fn append_message(&mut self, message: &[u8]) -> io::Result<u64> {
+    pub fn append_message(&mut self, message: &[u8]) -> io::Result<IoResult> {
         let mut log_file = self.log_file.lock();
         let mut index_file = self.index_file.lock();
-        if self.log_file.lock().metadata()?.len() as usize >= self.max_segment_size {
+        let file_len = log_file.metadata()?.len();
+        if file_len >= self.max_segment_size as u64 {
             log_file.flush()?;
             index_file.flush()?;
             self.mmap_index = MmapIndex::new(&index_file)?;
-            return Err(io::Error::new(io::ErrorKind::Other, "Segment full")); //抛出错误，让queue处理
-            // 由queue 来管理日志扩容的情况 self.rotate_segment()?;
+            return Ok(IoResult::SegmentFull);
         }
+
         let offset_bytes = self.offset.to_be_bytes();
-        
+        let log_pos_bytes = file_len.to_be_bytes();
 
-        let log_pos = log_file.metadata()?.len();
-        let log_pos_bytes = log_pos.to_be_bytes();
-
-        let mut buffer = vec![];
+        let mut buffer = Vec::with_capacity(MSG_HEADER_SIZE + message.len());
         buffer.extend_from_slice(&offset_bytes);
         buffer.extend_from_slice(&(message.len() as u32).to_be_bytes());
         buffer.extend_from_slice(message);
+
         log_file.write_all(&buffer)?;
 
-        if self.offset % 100 == 0 { // 每 100 条消息强制刷盘
-            log_file.flush()?;  
-
-            index_file.write_all(&offset_bytes)?;
-            index_file.write_all(&log_pos_bytes)?;
+        if self.offset % 100 == 0 {
+            let index_entry = [&offset_bytes[..], &log_pos_bytes[..]].concat();
+            log_file.flush()?;
+            index_file.write_all(&index_entry)?;
             index_file.flush()?;
             self.mmap_index = MmapIndex::new(&index_file)?; // 重新映射 mmap
         }
 
         let offset = self.offset; //相对偏移量（8 字节，相对于基准偏移量）
         self.offset += 1;
-        Ok(offset)
+        Ok(IoResult::Success(offset))
     }
 
     // * 恢复消息偏移量
     fn recover_message_offset(log_file: &MutexFile, mmap_index: &MmapIndex) -> io::Result<u64> {
-        
         let mut log_file = log_file.lock(); // 解锁获取 File
 
         let (mut last_offset, last_pos) = mmap_index.last_entry().unwrap_or((0, 0));
@@ -191,5 +189,4 @@ impl LogSegment {
     // pub fn get_next_offset() -> u64 {
     //     super::GLOBAL_OFFSET.fetch_add(1, Ordering::SeqCst)
     // }
-
 }

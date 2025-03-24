@@ -1,6 +1,7 @@
-use storage::LogSegment;
 use std::collections::VecDeque;
 use std::io;
+use storage::io_result::IoResult;
+use storage::LogSegment;
 
 use storage::LOG_FILE_SUFFIX;
 pub struct LogQueue {
@@ -35,7 +36,7 @@ impl LogQueue {
                 }
             })
             .collect();
-        
+
         segment_offsets.sort();
 
         // 加载所有日志段
@@ -57,20 +58,26 @@ impl LogQueue {
     pub fn append_message(&mut self, message: &[u8]) -> io::Result<u64> {
         if let Some(segment) = self.segments.back_mut() {
             match segment.append_message(message) {
-                Ok(offset) => return Ok(offset), // 1. 写入成功，返回 offset
-                Err(e) if e.kind() == io::ErrorKind::Other && e.to_string() == "Segment full" => {
-                    // 2. 发现段已满，创建新段
-                    println!("Segment full, rotating to new segment...");
+                Ok(IoResult::Success(offset)) => return Ok(offset),
+                Ok(IoResult::SegmentFull) => {
+                    
                 }
-                Err(e) => return Err(e), // 其他 IO 错误，直接返回
+                Err(e) => return Err(e)
             }
         }
 
         // 如果当前日志段已满，则创建新段
-        let mut new_segment = LogSegment::new(&self.log_dir, self.get_next_base_offset(), self.max_segment_size)?;
-        let offset = new_segment.append_message(message)?;
+        let mut new_segment = LogSegment::new(
+            &self.log_dir,
+            self.get_next_base_offset(),
+            self.max_segment_size,
+        )?;
+        let result = new_segment.append_message(message)?;
         self.segments.push_back(new_segment);
-        Ok(offset)
+        Ok(match result {
+            IoResult::Success(offset) => offset,
+            _ => unreachable!(), // 这里不会出现 SegmentFull
+        })
     }
 
     /// 读取指定 offset 的消息
@@ -85,6 +92,9 @@ impl LogQueue {
 
     /// 获取下一个日志段的起始 offset
     fn get_next_base_offset(&self) -> u64 {
-        self.segments.back().map(|s| s.get_next_offset()).unwrap_or(0)
+        self.segments
+            .back()
+            .map(|s| s.get_next_offset())
+            .unwrap_or(0)
     }
 }

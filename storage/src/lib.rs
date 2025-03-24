@@ -2,6 +2,7 @@ pub mod segment;
 pub mod mmap;
 pub mod retention;
 pub mod concurrency;
+pub mod io_result;
 
 // 对外暴露核心 API
 pub use segment::LogSegment;
