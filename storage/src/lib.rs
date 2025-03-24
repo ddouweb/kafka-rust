@@ -6,6 +6,7 @@ pub mod io_result;
 
 // 对外暴露核心 API
 pub use segment::LogSegment;
+pub use io_result::IoResult;
 pub use retention::clean_old_segments;
 use std::sync::atomic::AtomicU64;
 

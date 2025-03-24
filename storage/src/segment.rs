@@ -3,7 +3,6 @@ use crate::concurrency::MutexFile;
 use crate::io_result::IoResult;
 use crate::mmap::MmapIndex;
 use std::io::{self, Read, Seek, SeekFrom, Write};
-use std::sync::atomic::Ordering;
 pub struct LogSegment {
     log_file: MutexFile,     // 存储实际消息数据
     index_file: MutexFile,   // 存储索引

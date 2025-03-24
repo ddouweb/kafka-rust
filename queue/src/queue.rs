@@ -1,6 +1,6 @@
 use std::collections::VecDeque;
 use std::io;
-use storage::io_result::IoResult;
+use storage::IoResult;
 use storage::LogSegment;
 
 use storage::LOG_FILE_SUFFIX;
