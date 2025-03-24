@@ -7,9 +7,18 @@ mod tests {
 
     use super::*;
 
+    const TEST_LOG_DIR: &str = "test_log_queue";
+
+    /// **测试初始化**
+    fn setup() {
+        let _ = std::fs::remove_dir_all(TEST_LOG_DIR); // 清理旧数据
+        let _ = std::fs::create_dir(TEST_LOG_DIR);
+    }
+
     #[test]
     fn test() {
-        let mut log: LogSegment = LogSegment::new("logs", 0, 1024 * 1024).unwrap();
+        setup();
+        let mut log: LogSegment = LogSegment::new(TEST_LOG_DIR, 0, 1024 * 1024).unwrap();
         test_read_write_times(&mut log);
         for _ in 1..300 {
             test_read_write_times(&mut log);

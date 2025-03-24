@@ -185,6 +185,11 @@ impl LogSegment {
         self.offset
     }
 
+    //返回当前段大小
+    pub fn get_size(&self) -> usize {
+        self.log_file.lock().metadata().unwrap().len() as usize
+    }
+    
     // //返回全局唯一的offset
     // pub fn get_next_offset() -> u64 {
     //     super::GLOBAL_OFFSET.fetch_add(1, Ordering::SeqCst)
