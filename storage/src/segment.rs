@@ -15,31 +15,29 @@ pub struct LogSegment {
 
 impl LogSegment {
     pub fn new(log_dir: &str, base_offset: u64, max_segment_size: usize) -> io::Result<Self> {
-        Self::with_offset(log_dir, base_offset, max_segment_size, None)
-    }
-
-    pub fn with_offset(
-        log_dir: &str,
-        base_offset: u64,
-        max_segment_size: usize,
-        offset: Option<u64>,
-    ) -> io::Result<Self> {
         let log_dir = log_dir.trim_end_matches('/');
+
         if !std::path::Path::new(log_dir).exists() {
             std::fs::create_dir_all(log_dir)?;
         }
+
         let start_offset = format!("{:020}", base_offset);
         let log_file_path = format!("{}/{}{}", log_dir, start_offset, LOG_FILE_SUFFIX);
         let index_file_path = format!("{}/{}{}", log_dir, start_offset, INDEX_FILE_SUFFIX);
+
         let log_file = MutexFile::new(&log_file_path)?;
         let index_file = MutexFile::new(&index_file_path)?;
         let mmap_index = MmapIndex::new(&index_file.lock())?;
 
-        //let offset: u64 = Self::recover_message_offset(&log_file, &index_file)?;
-        // 如果指定了 offset，则直接使用；否则调用 recover_message_offset 恢复 offset
-        let offset = match offset {
-            Some(offset) => offset,
-            None => Self::recover_message_offset(&log_file, &mmap_index)?,
+        // 判断日志文件是否为空，如果为空，则使用 base_offset 否则从文件中恢复
+        let offset = {
+            let mut file = log_file.lock(); // 锁定文件进行操作
+            if file.metadata()?.len() == 0 {
+                base_offset // 文件为空时，偏移量从 base_offset 开始
+            } else {
+                // 恢复消息的偏移量
+                Self::recover_message_offset(&mut file, &mmap_index)?
+            }
         };
 
         Ok(Self {
@@ -87,8 +85,7 @@ impl LogSegment {
     }
 
     // * 恢复消息偏移量
-    fn recover_message_offset(log_file: &MutexFile, mmap_index: &MmapIndex) -> io::Result<u64> {
-        let mut log_file = log_file.lock(); // 解锁获取 File
+    fn recover_message_offset(log_file: &mut std::sync::MutexGuard<'_, std::fs::File>, mmap_index: &MmapIndex) -> io::Result<u64> {
 
         let (mut last_offset, last_pos) = mmap_index.last_entry().unwrap_or((0, 0));
 
@@ -189,7 +186,7 @@ impl LogSegment {
     pub fn get_size(&self) -> usize {
         self.log_file.lock().metadata().unwrap().len() as usize
     }
-    
+
     // //返回全局唯一的offset
     // pub fn get_next_offset() -> u64 {
     //     super::GLOBAL_OFFSET.fetch_add(1, Ordering::SeqCst)

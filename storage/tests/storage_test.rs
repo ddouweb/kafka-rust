@@ -16,6 +16,41 @@ mod tests {
     }
 
     #[test]
+    fn test_offset() {
+        setup();
+        let mut log: LogSegment = LogSegment::new(TEST_LOG_DIR, 0, 1024 * 1024).unwrap();
+        for except_offset in 0..3 {
+            match log.append_message(b"ABCDEFGHIJKLMNOPQRSTUVWXYZ1") {
+                Ok(IoResult::Success(offset)) => {
+                    assert_eq!(offset, except_offset, "message offset is error");
+                },
+                Ok(IoResult::SegmentFull) => {
+                    println!("SegmentFull");
+                },
+                Err(e) =>{
+                    panic!("Error: {}, {}",e.kind(),e.to_string());
+                }
+            };
+        }
+
+        let mut newlog: LogSegment = LogSegment::new(TEST_LOG_DIR, 0, 1024 * 1024).unwrap();
+        for new_except_offset in 3..100 {
+            match newlog.append_message(b"ABCDEFGHIJKLMNOPQRSTUVWXYZ1") {
+                Ok(IoResult::Success(new_offset)) => {
+                    assert_eq!(new_offset, new_except_offset, "message offset is error");
+                },
+                Ok(IoResult::SegmentFull) => {
+                    println!("SegmentFull");
+                },
+                Err(e) =>{
+                    panic!("Error: {}, {}",e.kind(),e.to_string());
+                }
+            };
+        }
+
+    }
+    
+    #[test]
     fn test() {
         setup();
         let mut log: LogSegment = LogSegment::new(TEST_LOG_DIR, 0, 1024 * 1024).unwrap();

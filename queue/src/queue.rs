@@ -83,7 +83,7 @@ impl LogQueue {
         let mut new_segment = LogSegment::new(
             &self.log_dir,
             new_offset,
-            self.max_segment_size,
+            self.max_segment_size
         )?;
         let result = new_segment.append_message(message)?;
         self.segments.push_back(new_segment);
