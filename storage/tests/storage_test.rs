@@ -49,6 +49,40 @@ mod tests {
         }
 
     }
+
+    #[test]
+    fn test_write() {
+        setup();
+        let mut log: LogSegment = LogSegment::new(TEST_LOG_DIR, 0, 1024 * 1024).unwrap();
+        for offset in 0..300 {
+            match log.append_message(b"heool kafka") {
+                Ok(IoResult::Success(write_offset)) => {
+                    assert_eq!(offset, write_offset, "message offset is error");
+                },
+                Ok(IoResult::SegmentFull) => {
+                    println!("SegmentFull");
+                },
+                Err(e) =>{
+                    panic!("Error: {}, {}",e.kind(),e.to_string());
+                }
+            };
+        } 
+
+        let mut log_new: LogSegment = LogSegment::new(TEST_LOG_DIR, 0, 1024 * 1024).unwrap();
+        for offset_new in 300..600 {
+            match log_new.append_message(b"heool kafka") {
+                Ok(IoResult::Success(write_offset)) => {
+                    assert_eq!(offset_new, write_offset, "message offset is error");
+                },
+                Ok(IoResult::SegmentFull) => {
+                    println!("SegmentFull");
+                },
+                Err(e) =>{
+                    panic!("Error: {}, {}",e.kind(),e.to_string());
+                }
+            };
+        }  
+    }
     
     #[test]
     fn test() {
