@@ -2,15 +2,16 @@ use std::collections::VecDeque;
 use std::io;
 use storage::IoResult;
 use storage::LogSegment;
-
+use std::collections::BTreeMap;
 use storage::LOG_FILE_SUFFIX;
 pub struct LogQueue {
     segments: VecDeque<LogSegment>, // 存储多个日志段  //后续考虑优化，是否会存在并发访问的情况？
     log_dir: String,                // 日志存储路径
     max_segment_size: usize,        // 每个日志段的最大大小
-                                    //max_queue_size: usize,          // 队列的最大大小
+    //max_queue_size: usize,          // 队列的最大大小
     active_write_segment_index: usize, // 当前活跃的写入 segment
     active_read_segment_index: usize,  // 当前活跃的读取 segment
+    segment_index: BTreeMap<u64, usize>, // 存储每个base_offset -> segment_index
 }
 
 impl LogQueue {
@@ -25,6 +26,7 @@ impl LogQueue {
             // /max_queue_size,
             active_write_segment_index: 0,
             active_read_segment_index: 0,
+            segment_index:BTreeMap::new()
         };
         queue.load_segments()?;
         Ok(queue)
@@ -49,15 +51,18 @@ impl LogQueue {
         segment_offsets.sort();
 
         // 加载所有日志段
-        for offset in segment_offsets {
-            let segment = LogSegment::new(&self.log_dir, offset, self.max_segment_size)?; //todo 待优化 LogSegment::new会找到当前segment的offset,当前由queue管理，是否有不一样的策略
+        for (index, offset) in segment_offsets.iter().enumerate() {
+            let segment = LogSegment::new(&self.log_dir, *offset, self.max_segment_size)?;
             self.segments.push_back(segment);
+            self.segment_index.insert(*offset, index);
         }
 
         // 如果没有找到任何日志段，创建一个新的
         if self.segments.is_empty() {
-            let new_segment = LogSegment::new(&self.log_dir, 0, self.max_segment_size)?;
+            let new_offset = 0;
+            let new_segment = LogSegment::new(&self.log_dir, new_offset, self.max_segment_size)?;
             self.segments.push_back(new_segment);
+            self.segment_index.insert(0, 0);
         }
 
         // 写入 segment 指向最后一个
@@ -80,36 +85,46 @@ impl LogQueue {
         }
         // 如果当前日志段已满，则创建新段
         let new_offset = self.get_next_base_offset();
-        let mut new_segment = LogSegment::new(
-            &self.log_dir,
-            new_offset,
-            self.max_segment_size
-        )?;
+        let mut new_segment = LogSegment::new(&self.log_dir, new_offset, self.max_segment_size)?;
         let result = new_segment.append_message(message)?;
         self.segments.push_back(new_segment);
-        self.active_write_segment_index = self.segments.len() - 1;
+        let index = self.segments.len() - 1;
+        self.active_write_segment_index = index;
+        self.segment_index.insert(new_offset, index);
         Ok(match result {
             IoResult::Success(offset) => offset,
-            _ => unreachable!(), // 这里不会出现 SegmentFull
+            //抛出IO异常
+            IoResult::SegmentFull => panic!("SegmentFull should not happen here"),
         })
     }
 
-    /// 读取指定 offset 的消息
+    /// 读取指定 offset 的消息 // todo 待优化:通过offset快速找到最近的segment,而不需要读所有文件。
     pub fn read_message(&mut self, offset: u64) -> io::Result<Option<Vec<u8>>> {
-        // **从当前的 active_read_segment 开始读**
-        if let Some(segment) = self.segments.get_mut(self.active_read_segment_index) {
-            if let Some(message) = segment.read_message(offset)? {
-                return Ok(Some(message));
+        // 1. **使用索引快速查找 segment**
+        if let Some((_, &index)) = self.segment_index.range(..=offset).next_back() {
+            if let Some(segment) = self.segments.get_mut(index) {
+                return segment.read_message(offset);
             }
         }
-        // **如果 offset 超出了当前的 active_read_segment，向前查找**
-        for (index, segment) in self.segments.iter_mut().enumerate().skip(self.active_read_segment_index) {
-            if let Some(message) = segment.read_message(offset)? {
-                self.active_read_segment_index = index; // 更新 active_read_segment
-                return Ok(Some(message));
-            }
-        }
-
+        // // **从当前的 active_read_segment 开始读**
+        // if let Some(segment) = self.segments.get_mut(self.active_read_segment_index) {
+        //     if let Some(message) = segment.read_message(offset)? {
+        //         return Ok(Some(message));
+        //     }
+        // }
+        // // **如果 offset 超出了当前的 active_read_segment，向前查找**
+        // for (index, segment) in self
+        //     .segments
+        //     .iter_mut()
+        //     .enumerate()
+        //     // index是从0开始的，所以skip要加1。避免重复读不到消息浪费IO
+        //     .skip(self.active_read_segment_index + 1)
+        // {
+        //     if let Some(message) = segment.read_message(offset)? {
+        //         self.active_read_segment_index = index; // 更新 active_read_segment
+        //         return Ok(Some(message));
+        //     }
+        // }
         Ok(None)
     }
 

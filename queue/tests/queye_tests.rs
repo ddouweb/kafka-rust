@@ -41,6 +41,28 @@ mod tests {
     }
 
     #[test]
+    fn test_read_message_after_rotation() {
+        setup();
+        let mut queue = LogQueue::new(TEST_LOG_DIR, 1024).expect("Failed to create LogQueue");
+        for write_offset in 0..3000 {
+            // 将 offset 转换为字节并附加到消息中
+            let message = format!("hello kafka {}", write_offset).into_bytes();
+            queue.append_message(&message).unwrap();
+        }
+
+        for read_offset in 800..2000 {
+            let message = format!("hello kafka {}", read_offset).into_bytes();
+            let read_message = queue.read_message(read_offset).unwrap();
+            // 验证读取的消息是否与写入的消息一致
+            assert_eq!(
+                read_message,
+                Some(message),
+                "Read message does not match written message"
+            );
+        }
+    }
+
+    #[test]
     fn test_segment_rotation() {
         setup();
         let mut queue = LogQueue::new(TEST_LOG_DIR, 10).expect("Failed to create LogQueue"); // 设定极小的 segment 触发滚动
