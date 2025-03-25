@@ -5,7 +5,7 @@ use crate::mmap::MmapIndex;
 use std::io::{self, Read, Seek, SeekFrom, Write};
 pub struct LogSegment {
     log_file: MutexFile,     // 存储实际消息数据
-    index_file: MutexFile,   // 存储索引
+    index_file: MutexFile,   // 存储索引 //todo 待优化：是否预分配空间？
     mmap_index: MmapIndex,   // 存储索引,使用mmap
     base_offset: u64,        // 当前段的起始 offset
     offset: u64,             // 下一个消息的 offset
