@@ -5,3 +5,7 @@ edition = "2021"
 
 [dependencies]
 storage = { path = "../storage" }
+
+[lib]
+name = "queue"
+path = "src/lib.rs"
