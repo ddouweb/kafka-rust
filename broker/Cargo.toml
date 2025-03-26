@@ -1,8 +1,9 @@
 [package]
-name = "producer"
+name = "broker"
 version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-queue = { path = "../queue" }
 network = { path = "../network" }
+queue = { path = "../queue" }
+protocol = { path = "../protocol" }

@@ -5,15 +5,15 @@ edition = "2021"
 
 
 [workspace]
-members = ["cluster", "consumer", "network", "producer", "queue", "replication", "storage"]
+members = [ "broker", "client","cluster","network", "protocol", "queue", "replication", "storage"]
 
 
 [dependencies]
 network = { path = "./network" }
 storage = { path = "./storage" }
 queue = { path = "./queue" }
-producer = { path = "./producer" }
-consumer = { path = "./consumer" }
+client = { path = "./client" }
+broker = { path = "./broker" }
 replication = { path = "./replication" }
 cluster = { path = "./cluster" }
 
