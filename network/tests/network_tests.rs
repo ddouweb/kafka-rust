@@ -1,6 +1,5 @@
 use std::vec;
 use network::message::BinaryMessage;
-use rand::Rng;
 use tokio::net::TcpStream;
 use network::send_message;
 use network::receive_message;
@@ -12,14 +11,9 @@ async fn test_send_message() {
     // 模拟客户端连接服务器
     let mut stream = TcpStream::connect(addr).await.unwrap();
 
-    let mut rng = rand::rng();
-
-    // 生成一个随机的 u32 数字
-    let random_number: u32 = rng.random();
-
     let original_msg = BinaryMessage {
         msg_type: 1,
-        msg_id: random_number,
+        msg_id: 10001001,
         payload: vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
     };
 
