@@ -5,7 +5,7 @@ edition = "2021"
 
 
 [workspace]
-members = [ "broker", "client","cluster","network", "protocol", "queue", "replication", "storage"]
+members = [ "broker", "client","cluster", "cfg","network", "protocol", "queue", "replication", "storage"]
 
 
 [dependencies]
@@ -16,5 +16,8 @@ client = { path = "./client" }
 broker = { path = "./broker" }
 replication = { path = "./replication" }
 cluster = { path = "./cluster" }
+cfg = { path = "./cfg" }
+protocol = { path = "./protocol" }
+
 
 tokio = { version = "1.44.1", features = ["full"] }
