@@ -1,6 +1,7 @@
 use std::fs::OpenOptions;
 use std::sync::{Arc, Mutex};
 
+#[derive(Debug)]
 pub struct MutexFile {
     pub file: Arc<Mutex<std::fs::File>>,
 }

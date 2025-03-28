@@ -2,6 +2,8 @@ use memmap2::Mmap;
 use std::fs::File;
 use std::io::{self};
 use super::{OFFSET_SIZE,INDEX_ENTRY_SIZE,POS_SIZE};
+
+#[derive(Debug)]
 pub struct MmapIndex {
     mmap: Mmap,
 }
