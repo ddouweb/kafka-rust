@@ -33,7 +33,7 @@ impl Broker {
     /// # Returns
     /// * `Result<(), String>` - 创建成功返回 Ok(()), 失败返回错误信息
     pub fn create_topic(&self, topic: &str, partitions: usize) -> Result<(), String> {
-        let config = TopicConfig {
+        let config: TopicConfig = TopicConfig {
             name: topic.to_string(),
             partitions,
             replication_factor: 1, // 默认值

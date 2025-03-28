@@ -1,7 +1,7 @@
-mod broker;
-mod request;
-mod metadata;
-mod topic;
+pub mod metadata;
+pub mod topic;
+pub mod broker;
+pub mod request;
 
 // 对外暴露的核心接口
 pub use broker::Broker;
