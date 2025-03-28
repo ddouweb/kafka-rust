@@ -4,6 +4,8 @@ use std::io;
 use storage::IoResult;
 use storage::LogSegment;
 use storage::LOG_FILE_SUFFIX;
+
+#[derive(Debug)]
 pub struct LogQueue {
     segments: VecDeque<LogSegment>, // 存储多个日志段  //后续考虑优化，是否会存在并发访问的情况？
     log_dir: String,                // 日志存储路径
