@@ -118,6 +118,7 @@ impl MetadataManager {
     /// 
     /// # Returns
     /// * `Result<Option<TopicMetadata>, String>` - 成功返回主题元数据，失败返回错误信息
+    #[allow(dead_code)]
     pub fn get_topic(&self, name: &str) -> Result<Option<TopicMetadata>, String> {
         let topics = self.topics.lock().map_err(|e| e.to_string())?;
         Ok(topics.get(name).cloned())
@@ -130,6 +131,7 @@ impl MetadataManager {
     /// 
     /// # Returns
     /// * `Result<(), String>` - 删除成功返回 Ok(()), 失败返回错误信息
+    #[allow(dead_code)]
     pub fn remove_topic(&self, name: &str) -> Result<(), String> {
         let mut topics = self.topics.lock().map_err(|e| e.to_string())?;
         topics.remove(name);

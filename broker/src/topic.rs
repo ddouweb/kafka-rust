@@ -16,7 +16,7 @@ pub struct Topic {
 
 /// 分区，代表主题的一个分区，包含消息队列和元数据
 #[derive(Debug)]
-struct Partition {
+pub struct Partition {
     /// 分区 ID
     id: usize,
     /// 消息队列，使用 Arc<Mutex> 实现线程安全

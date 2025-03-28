@@ -140,7 +140,7 @@ impl Broker {
     }
 
     /// 处理元数据请求
-    fn handle_metadata_request(&self, req: MetadataRequest) -> Result<(), String> {
+    fn handle_metadata_request(&self, _req: MetadataRequest) -> Result<(), String> {
         // TODO: 实现元数据请求处理
         Ok(())
     }
@@ -152,13 +152,13 @@ impl Broker {
     }
 
     /// 处理加入消费者组请求
-    fn handle_join_group_request(&self, req: JoinGroupRequest) -> Result<(), String> {
+    fn handle_join_group_request(&self, _req: JoinGroupRequest) -> Result<(), String> {
         // TODO: 实现加入消费者组请求处理
         Ok(())
     }
 
     /// 处理同步消费者组请求
-    fn handle_sync_group_request(&self, req: SyncGroupRequest) -> Result<(), String> {
+    fn handle_sync_group_request(&self, _req: SyncGroupRequest) -> Result<(), String> {
         // TODO: 实现同步消费者组请求处理
         Ok(())
     }

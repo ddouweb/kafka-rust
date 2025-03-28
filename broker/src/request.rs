@@ -1,6 +1,5 @@
 use network::BinaryMessage;
 use crate::broker::Broker;
-use protocol::ClientRequest;
 
 pub struct RequestHandler {
     broker: Broker,
