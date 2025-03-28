@@ -1,8 +1,0 @@
-[broker]
-id = 1
-host = "127.0.0.1"
-port = 9092
-
-[storage]
-log_dir = "/var/lib/rust_kafka"
-segment_size = 1048576

@@ -63,20 +63,20 @@ mod tests {
     #[test]
     fn test_custom_config() {
         // 保存原始环境变量值
-        let original_host = env::var("APP_BROKER__HOST").ok();
-        let original_port = env::var("APP_BROKER__PORT").ok();
-        let original_log_dir = env::var("APP_STORAGE__LOG_DIR").ok();
+        let original_host = env::var("APP__BROKER__HOST").ok();
+        let original_port = env::var("APP__BROKER__PORT").ok();
+        let original_log_dir = env::var("APP__STORAGE__LOG_DIR").ok();
 
         // 设置环境变量来覆盖默认配置
-        env::set_var("APP_BROKER__HOST", "0.0.0.0");
-        env::set_var("APP_BROKER__PORT", "9093");
-        env::set_var("APP_STORAGE__LOG_DIR", "./data");
+        env::set_var("APP__BROKER__HOST", "0.0.0.0");
+        env::set_var("APP__BROKER__PORT", "9093");
+        env::set_var("APP__STORAGE__LOG_DIR", "./data");
         
         // 打印所有相关的环境变量值
         println!("\n=== 环境变量设置 ===");
-        println!("APP_BROKER__HOST: {:?}", env::var("APP_BROKER__HOST"));
-        println!("APP_BROKER__PORT: {:?}", env::var("APP_BROKER__PORT"));
-        println!("APP_STORAGE__LOG_DIR: {:?}", env::var("APP_STORAGE__LOG_DIR"));
+        println!("APP__BROKER__HOST: {:?}", env::var("APP__BROKER__HOST"));
+        println!("APP__BROKER__PORT: {:?}", env::var("APP__BROKER__PORT"));
+        println!("APP__STORAGE__LOG_DIR: {:?}", env::var("APP__STORAGE__LOG_DIR"));
         
         let config = match ConfigStruct::new() {
             Ok(cfg) => cfg,
@@ -90,7 +90,7 @@ mod tests {
         println!("\n=== 配置值 ===");
         println!("期望的日志目录: ./data");
         println!("实际的日志目录: {}", config.storage.log_dir);
-        println!("环境变量值: {:?}", env::var("APP_STORAGE__LOG_DIR"));
+        println!("环境变量值: {:?}", env::var("APP__STORAGE__LOG_DIR"));
         
         // 验证环境变量覆盖是否生效
         assert_eq!(config.broker.host, "0.0.0.0", "Broker host should be 0.0.0.0");
@@ -104,55 +104,19 @@ mod tests {
 
         // 恢复原始环境变量
         if let Some(host) = original_host {
-            env::set_var("APP_BROKER__HOST", host);
+            env::set_var("APP__BROKER__HOST", host);
         } else {
-            env::remove_var("APP_BROKER__HOST");
+            env::remove_var("APP__BROKER__HOST");
         }
         if let Some(port) = original_port {
-            env::set_var("APP_BROKER__PORT", port);
+            env::set_var("APP__BROKER__PORT", port);
         } else {
-            env::remove_var("APP_BROKER__PORT");
+            env::remove_var("APP__BROKER__PORT");
         }
         if let Some(log_dir) = original_log_dir {
-            env::set_var("APP_STORAGE__LOG_DIR", log_dir);
+            env::set_var("APP__STORAGE__LOG_DIR", log_dir);
         } else {
-            env::remove_var("APP_STORAGE__LOG_DIR");
+            env::remove_var("APP__STORAGE__LOG_DIR");
         }
-    }
-
-    #[test]
-    fn test_snake_config() {
-        env::set_var("APP_STORAGE__LOG_DIR", "./data");
-        env::set_var("APP_STORAGE__SEGMENT_SIZE", "1001");
-
-        
-        // 打印所有相关的环境变量值
-        println!("\n=== 环境变量设置 ===");
-        println!("APP_STORAGE__LOG_DIR: {:?}", env::var("APP_STORAGE__LOG_DIR"));
-        println!("APP_STORAGE__SEGMENT_SIZE: {:?}", env::var("APP_STORAGE__SEGMENT_SIZE"));
-
-        let config = match ConfigStruct::new() {
-            Ok(cfg) => cfg,
-            Err(e) => {
-                eprintln!("配置加载失败: {:?}", e);
-                panic!("配置加载失败");
-            }
-        };
-        
-        // 打印实际值，用于调试
-
-        println!("\n=== 配置值 ===");
-        println!("期望的日志目录: 1001");
-        println!("实际的日志目录: {}", config.storage.segment_size);
-        println!("环境变量值: {:?}", env::var("APP_STORAGE__SEGMENT_SIZE"));
-
-        
-        println!("\n=== 配置值 ===");
-        println!("期望的日志目录: ./data");
-        println!("实际的日志目录: {}", config.storage.log_dir);
-        println!("环境变量值: {:?}", env::var("APP_STORAGE__LOG_DIR"));
-        
-        // 验证环境变量覆盖是否生效
-        assert_eq!(config.storage.log_dir, "./data", "Log directory should be ./data");
     }
 }
