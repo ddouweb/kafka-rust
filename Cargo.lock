@@ -83,6 +83,7 @@ dependencies = [
 name = "broker"
 version = "0.1.0"
 dependencies = [
+ "cfg",
  "network",
  "protocol",
  "queue",

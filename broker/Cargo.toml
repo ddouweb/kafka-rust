@@ -7,3 +7,4 @@ edition = "2021"
 network = { path = "../network" }
 queue = { path = "../queue" }
 protocol = { path = "../protocol" }
+cfg = {path = "../cfg"}
