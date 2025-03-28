@@ -22,6 +22,7 @@ pub struct Partition {
     /// 消息队列，使用 Arc<Mutex> 实现线程安全
     queue: Arc<Mutex<LogQueue>>,
     /// 分区元数据
+    #[allow(dead_code)]
     metadata: PartitionMetadata,
 }
 
