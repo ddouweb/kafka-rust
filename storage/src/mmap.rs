@@ -2,10 +2,18 @@ use memmap2::Mmap;
 use std::fs::File;
 use std::io::{self};
 use super::{OFFSET_SIZE,INDEX_ENTRY_SIZE,POS_SIZE};
+use std::fmt;
 
-#[derive(Debug)]
 pub struct MmapIndex {
     mmap: Mmap,
+}
+
+impl fmt::Debug for MmapIndex {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("MmapIndex")
+            .field("mmap_len", &self.mmap.len())
+            .finish()
+    }
 }
 
 impl MmapIndex {
