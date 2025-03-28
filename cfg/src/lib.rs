@@ -1,8 +1,6 @@
 use config::{Config, ConfigError, Environment, File};
 use serde::Deserialize;
 
-pub struct ConfigLoader;
-
 /// Broker 配置结构体
 #[derive(Debug, Deserialize)]
 pub struct BrokerConfig {
