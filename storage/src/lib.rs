@@ -8,7 +8,6 @@ pub mod io_result;
 pub use segment::LogSegment;
 pub use io_result::IoResult;
 pub use retention::clean_old_segments;
-use std::sync::atomic::AtomicU64;
 
 const MSG_LEN_SIZE: usize = 4; // 消息长度占 4 字节
 const OFFSET_SIZE: usize = 8; // 相对偏移量 占 8 字节
@@ -22,5 +21,5 @@ pub const LOG_FILE_SUFFIX: &str = ".log";
 //定义日志索引后缀为.index
 pub const INDEX_FILE_SUFFIX: &str = ".index";
 
-
-static GLOBAL_OFFSET: AtomicU64 = AtomicU64::new(0);
+//use std::sync::atomic::AtomicU64;
+//static GLOBAL_OFFSET: AtomicU64 = AtomicU64::new(0);
