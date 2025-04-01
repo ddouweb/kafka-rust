@@ -37,18 +37,22 @@ impl LogQueue {
     /// 加载已有的日志段
     fn load_segments(&mut self) -> io::Result<()> {
         // 获取目录下所有日志段
-        let mut segment_offsets: Vec<u64> = std::fs::read_dir(&self.log_dir)?
-            .filter_map(|entry| {
-                let entry = entry.ok()?;
-                let file_name = entry.file_name();
-                let name = file_name.to_str()?;
-                if name.ends_with(LOG_FILE_SUFFIX) {
-                    name.trim_end_matches(LOG_FILE_SUFFIX).parse::<u64>().ok()
-                } else {
-                    None
-                }
-            })
-            .collect();
+        let mut segment_offsets: Vec<u64> = if std::path::Path::new(&self.log_dir).exists() {
+            std::fs::read_dir(&self.log_dir)?
+                .filter_map(|entry| {
+                    let entry = entry.ok()?;
+                    let file_name = entry.file_name();
+                    let name = file_name.to_str()?;
+                    if name.ends_with(LOG_FILE_SUFFIX) {
+                        name.trim_end_matches(LOG_FILE_SUFFIX).parse::<u64>().ok()
+                    } else {
+                        None
+                    }
+                })
+                .collect()
+        } else {
+            Vec::new()
+        };
 
         segment_offsets.sort();
 

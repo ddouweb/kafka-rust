@@ -2,24 +2,24 @@ use broker::{
     Topic,
     metadata::{TopicConfig, PartitionMetadata, TopicMetadata, MetadataManager}
 };
-
+const TEST_TOPIC: &str = "test-topic";
 #[test]
 fn test_topic_creation() {
     let config = TopicConfig {
-        name: "test-topic".to_string(),
+        name: TEST_TOPIC.to_string(),
         partitions: 3,
         replication_factor: 1,
         segment_size: 1024 * 1024,
     };
-    let topic = Topic::new("test-topic".to_string(), config.clone());
-    assert_eq!(topic.get_name(), "test-topic");
+    let topic = Topic::new(TEST_TOPIC.to_string(), config.clone());
+    assert_eq!(topic.get_name(),TEST_TOPIC);
     assert_eq!(topic.get_partition_count(), 0);
 }
 
 #[test]
 fn test_partition_creation() {
-    let mut topic = Topic::new("test-topic".to_string(), TopicConfig {
-        name: "test-topic".to_string(),
+    let mut topic = Topic::new(TEST_TOPIC.to_string(), TopicConfig {
+        name: TEST_TOPIC.to_string(),
         partitions: 3,
         replication_factor: 1,
         segment_size: 1024 * 1024,
@@ -41,8 +41,8 @@ fn test_partition_creation() {
 
 #[test]
 fn test_partition_deletion() {
-    let mut topic = Topic::new("test-topic".to_string(), TopicConfig {
-        name: "test-topic".to_string(),
+    let mut topic = Topic::new(TEST_TOPIC.to_string(), TopicConfig {
+        name: TEST_TOPIC.to_string(),
         partitions: 3,
         replication_factor: 1,
         segment_size: 1024 * 1024,
@@ -65,8 +65,8 @@ fn test_partition_deletion() {
 
 #[test]
 fn test_message_operations() {
-    let mut topic = Topic::new("test-topic".to_string(), TopicConfig {
-        name: "test-topic".to_string(),
+    let mut topic = Topic::new(TEST_TOPIC.to_string(), TopicConfig {
+        name: TEST_TOPIC.to_string(),
         partitions: 3,
         replication_factor: 1,
         segment_size: 1024 * 1024,
@@ -100,13 +100,13 @@ fn test_metadata_manager() {
     let manager = MetadataManager::new();
     
     let config = TopicConfig {
-        name: "test-topic".to_string(),
+        name: TEST_TOPIC.to_string(),
         partitions: 3,
         replication_factor: 1,
         segment_size: 1024 * 1024,
     };
     
-    let mut topic_metadata = TopicMetadata::new("test-topic".to_string(), config);
+    let mut topic_metadata = TopicMetadata::new(TEST_TOPIC.to_string(), config);
     
     // 测试添加主题
     assert!(manager.add_topic(topic_metadata.clone()).is_ok());
@@ -115,14 +115,14 @@ fn test_metadata_manager() {
     assert!(manager.add_topic(topic_metadata.clone()).is_err());
     
     // 测试获取主题
-    let result = manager.get_topic("test-topic").unwrap();
+    let result = manager.get_topic(TEST_TOPIC).unwrap();
     assert!(result.is_some());
-    assert_eq!(result.unwrap().name, "test-topic");
+    assert_eq!(result.unwrap().name, TEST_TOPIC);
     
     // 测试删除主题
-    assert!(manager.remove_topic("test-topic").is_ok());
+    assert!(manager.remove_topic(TEST_TOPIC).is_ok());
     
     // 验证主题已被删除
-    let result = manager.get_topic("test-topic").unwrap();
+    let result = manager.get_topic(TEST_TOPIC).unwrap();
     assert!(result.is_none());
 } 
