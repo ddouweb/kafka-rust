@@ -36,6 +36,8 @@ pub struct TopicConfig {
     pub replication_factor: usize,
     /// 单个日志段的最大大小（字节）
     pub segment_size: usize,
+    /// 基础目录
+    pub base_dir: String,
 }
 
 impl TopicMetadata {

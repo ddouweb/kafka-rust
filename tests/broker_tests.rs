@@ -2,6 +2,7 @@ use broker::{
     Topic,
     metadata::{TopicConfig, PartitionMetadata, TopicMetadata, MetadataManager}
 };
+const LOD_DIR :&str = "target/topics";
 const TEST_TOPIC: &str = "test-topic";
 #[test]
 fn test_topic_creation() {

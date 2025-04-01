@@ -2,28 +2,17 @@ use std::sync::{Arc, Mutex};
 use queue::LogQueue;
 use crate::metadata::{TopicConfig, PartitionMetadata};
 use std::fmt;
+use std::collections::HashMap;
 
 /// 主题，代表一个消息主题，包含多个分区
 #[derive(Debug)]
 pub struct Topic {
     /// 主题名称
     name: String,
-    /// 主题的分区列表
-    partitions: Vec<Partition>,
     /// 主题的配置信息
     config: TopicConfig,
-}
-
-/// 分区，代表主题的一个分区，包含消息队列和元数据
-#[derive(Debug)]
-pub struct Partition {
-    /// 分区 ID
-    id: usize,
-    /// 消息队列，使用 Arc<Mutex> 实现线程安全
-    queue: Arc<Mutex<LogQueue>>,
-    /// 分区元数据
-    #[allow(dead_code)]
-    metadata: PartitionMetadata,
+    /// 主题的分区列表
+    partitions: HashMap<usize, Arc<Mutex<LogQueue>>>,
 }
 
 impl Topic {
@@ -35,9 +24,19 @@ impl Topic {
     pub fn new(name: String, config: TopicConfig) -> Self {
         Self {
             name,
-            partitions: Vec::new(),
             config,
+            partitions: HashMap::new(),
         }
+    }
+
+    /// 获取主题的名称
+    pub fn get_name(&self) -> &str {
+        &self.name
+    }
+
+    /// 获取主题的分区数量
+    pub fn get_partition_count(&self) -> usize {
+        self.partitions.len()
     }
 
     /// 创建新的分区
@@ -49,21 +48,17 @@ impl Topic {
     /// # Returns
     /// * `Result<(), String>` - 创建成功返回 Ok(()), 失败返回错误信息
     pub fn create_partition(&mut self, partition_id: usize, metadata: PartitionMetadata) -> Result<(), String> {
-        if self.partitions.iter().any(|p| p.id == partition_id) {
-            return Err("Partition already exists".to_string());
+        if self.partitions.contains_key(&partition_id) {
+            return Err(format!("分区 {} 已存在", partition_id));
         }
 
-        let queue = Arc::new(Mutex::new(LogQueue::new(
-            &format!("{}/partition-{}", self.name, partition_id),
-            self.config.segment_size,
-        ).unwrap()));
+        // 创建分区目录
+        let partition_dir = format!("{}/{}-{}", self.config.base_dir, self.name, partition_id);
+        std::fs::create_dir_all(&partition_dir).map_err(|e| format!("创建分区目录失败: {}", e))?;
 
-        self.partitions.push(Partition {
-            id: partition_id,
-            queue,
-            metadata,
-        });
-
+        let queue = LogQueue::new(&partition_dir, self.config.segment_size)
+            .map_err(|e| format!("创建消息队列失败: {}", e))?;
+        self.partitions.insert(partition_id, Arc::new(Mutex::new(queue)));
         Ok(())
     }
 
@@ -75,34 +70,12 @@ impl Topic {
     /// # Returns
     /// * `Result<(), String>` - 删除成功返回 Ok(()), 失败返回错误信息
     pub fn delete_partition(&mut self, partition_id: usize) -> Result<(), String> {
-        if let Some(index) = self.partitions.iter().position(|p| p.id == partition_id) {
-            self.partitions.remove(index);
-            Ok(())
-        } else {
-            Err("Partition not found".to_string())
+        if !self.partitions.contains_key(&partition_id) {
+            return Err(format!("分区 {} 不存在", partition_id));
         }
-    }
 
-    /// 获取指定 ID 的分区
-    /// 
-    /// # Arguments
-    /// * `partition_id` - 分区 ID
-    /// 
-    /// # Returns
-    /// * `Option<&Partition>` - 如果找到分区则返回其引用，否则返回 None
-    pub fn get_partition(&self, partition_id: usize) -> Option<&Partition> {
-        self.partitions.iter().find(|p| p.id == partition_id)
-    }
-
-    /// 获取指定 ID 的分区的可变引用
-    /// 
-    /// # Arguments
-    /// * `partition_id` - 分区 ID
-    /// 
-    /// # Returns
-    /// * `Option<&mut Partition>` - 如果找到分区则返回其可变引用，否则返回 None
-    pub fn get_partition_mut(&mut self, partition_id: usize) -> Option<&mut Partition> {
-        self.partitions.iter_mut().find(|p| p.id == partition_id)
+        self.partitions.remove(&partition_id);
+        Ok(())
     }
 
     /// 向指定分区追加消息
@@ -113,15 +86,15 @@ impl Topic {
     /// 
     /// # Returns
     /// * `Result<u64, String>` - 成功返回消息的偏移量，失败返回错误信息
-    pub fn append_message(&self, partition_id: usize, message: Vec<u8>) -> Result<u64, String> {
-        let partition = self.get_partition(partition_id)
-            .ok_or_else(|| "Partition not found".to_string())?;
+    pub fn append_message(&mut self, partition_id: usize, message: Vec<u8>) -> Result<u64, String> {
+        let queue = self.partitions.get(&partition_id)
+            .ok_or_else(|| format!("分区 {} 不存在", partition_id))?;
         
-        let mut queue = partition.queue.lock()
-            .map_err(|e| e.to_string())?;
+        let mut queue = queue.lock()
+            .map_err(|e| format!("获取队列锁失败: {}", e))?;
             
         queue.append_message(&message)
-            .map_err(|e| e.to_string())
+            .map_err(|e| format!("写入消息失败: {}", e))
     }
 
     /// 从指定分区读取消息
@@ -132,35 +105,18 @@ impl Topic {
     /// 
     /// # Returns
     /// * `Result<Option<Vec<u8>>, String>` - 成功返回消息内容，失败返回错误信息
-    pub fn read_message(&self, partition_id: usize, offset: u64) -> Result<Option<Vec<u8>>, String> {
-        let partition = self.get_partition(partition_id)
-            .ok_or_else(|| "Partition not found".to_string())?;
-        
-        let mut queue = partition.queue.lock()
-            .map_err(|e| e.to_string())?;
+    pub fn read_message(&mut self, partition_id: usize, offset: u64) -> Result<Option<Vec<u8>>, String> {
+        let queue = self.partitions.get(&partition_id)
+            .ok_or_else(|| format!("分区 {} 不存在", partition_id))?;
+            
+        let mut queue = queue.lock()
+            .map_err(|e| format!("获取队列锁失败: {}", e))?;
             
         queue.read_message(offset)
-            .map_err(|e| e.to_string())
-    }
-
-    /// 获取主题的分区数量
-    /// 
-    /// # Returns
-    /// * `usize` - 分区数量
-    pub fn get_partition_count(&self) -> usize {
-        self.partitions.len()
-    }
-
-    /// 获取主题名称
-    /// 
-    /// # Returns
-    /// * `&str` - 主题名称
-    pub fn get_name(&self) -> &str {
-        &self.name
+            .map_err(|e| format!("读取消息失败: {}", e))
     }
 }
 
-/// 为 Topic 实现 Display trait，用于格式化输出
 impl fmt::Display for Topic {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "Topic: {} ({} partitions)", self.name, self.partitions.len())

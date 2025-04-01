@@ -68,8 +68,8 @@ impl Broker {
     /// # Returns
     /// * `Result<u64, String>` - 成功返回消息的偏移量，失败返回错误信息
     pub fn send_message(&self, topic: &str, message: Vec<u8>) -> Result<u64, String> {
-        let topics = self.topics.lock().map_err(|e| e.to_string())?;
-        let topic = topics.get(topic)
+        let mut topics = self.topics.lock().map_err(|e| e.to_string())?;
+        let topic = topics.get_mut(topic)
             .ok_or_else(|| "Topic not found".to_string())?;
         
         let partition_id = message.len() % topic.get_partition_count();
@@ -86,8 +86,8 @@ impl Broker {
     /// # Returns
     /// * `Result<Option<Vec<u8>>, String>` - 成功返回消息内容，失败返回错误信息
     pub fn fetch_message(&self, topic: &str, partition: usize, offset: u32) -> Result<Option<Vec<u8>>, String> {
-        let topics = self.topics.lock().map_err(|e| e.to_string())?;
-        let topic = topics.get(topic)
+        let mut topics = self.topics.lock().map_err(|e| e.to_string())?;
+        let topic = topics.get_mut(topic)
             .ok_or_else(|| "Topic not found".to_string())?;
         
         topic.read_message(partition, offset as u64)
