@@ -32,19 +32,13 @@ impl Broker {
     /// 
     /// # Returns
     /// * `Result<(), String>` - 创建成功返回 Ok(()), 失败返回错误信息
-    pub fn create_topic(&self, topic: &str, partitions: usize) -> Result<(), String> {
-        let config: TopicConfig = TopicConfig {
-            name: topic.to_string(),
-            partitions,
-            replication_factor: 1, // 默认值
-            segment_size: 1024 * 1024, // 默认 1MB
-        };
+    pub fn create_topic(&self, topic: &str, config: TopicConfig) -> Result<(), String> {
 
         let topic_metadata = TopicMetadata::new(topic.to_string(), config.clone());
         self.metadata_manager.add_topic(topic_metadata)?;
 
-        let mut topic = Topic::new(topic.to_string(), config);
-        for i in 0..partitions {
+        let mut topic = Topic::new(topic.to_string(), config.clone());
+        for i in 0..config.partitions {
             let metadata = PartitionMetadata {
                 id: i,
                 leader: 1, // 默认值
