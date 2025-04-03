@@ -172,6 +172,7 @@ impl Broker {
             ClientRequest::OffsetFetch(req) => self.handle_offset_fetch_request(req),
             ClientRequest::JoinGroup(req) => self.handle_join_group_request(req),
             ClientRequest::SyncGroup(req) => self.handle_sync_group_request(req),
+            _ => Err("Unsupported request".to_string()),
         }
     }
 }
