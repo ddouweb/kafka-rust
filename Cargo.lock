@@ -139,6 +139,12 @@ checksum = "baf1de4339761588bc0619e3cbc0120ee582ebb74b53b4efbf79117bd2da40fd"
 [[package]]
 name = "client"
 version = "0.1.0"
+dependencies = [
+ "network",
+ "protocol",
+ "serde",
+ "serde_json",
+]
 
 [[package]]
 name = "cluster"
@@ -513,6 +519,8 @@ dependencies = [
 name = "network"
 version = "0.1.0"
 dependencies = [
+ "protocol",
+ "serde_json",
  "tokio",
 ]
 

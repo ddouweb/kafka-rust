@@ -13,6 +13,18 @@ pub enum ClientRequest {
     JoinGroup(JoinGroupRequest),
     /// 同步消费者组状态的请求。
     SyncGroup(SyncGroupRequest),
+    /// 创建主题的请求。
+    CreateTopic(CreateTopicRequest),
+    /// 删除主题的请求。
+    DeleteTopic(DeleteTopicRequest),
+    /// 获取主题描述的请求。
+    DescribeTopic(DescribeTopicRequest),
+    /// 列出所有主题的请求。
+    ListTopics(ListTopicsRequest),
+    /// 更新主题配置的请求。
+    UpdateTopicConfig(UpdateTopicConfigRequest),
+    /// 获取集群信息的请求。
+    GetClusterInfo(GetClusterInfoRequest),
 }
 
 /// 表示向 Kafka 主题发送消息的请求。
@@ -74,3 +86,47 @@ pub struct SyncGroupRequest {
     /// 组的主题-分区分配。
     pub assignments: Vec<(String, usize)>,
 }
+
+/// 表示创建主题的请求。
+#[derive(Debug)]
+pub struct CreateTopicRequest {
+    /// 主题名称
+    pub name: String,
+    /// 分区数量
+    pub num_partitions: usize,
+    /// 副本因子
+    pub replication_factor: usize,
+    /// 其他配置项
+    pub configs: std::collections::HashMap<String, String>,
+}
+
+/// 表示删除主题的请求。
+#[derive(Debug)]
+pub struct DeleteTopicRequest {
+    /// 主题名称
+    pub name: String,
+}
+
+/// 表示获取主题描述的请求。
+#[derive(Debug)]
+pub struct DescribeTopicRequest {
+    /// 主题名称
+    pub name: String,
+}
+
+/// 表示列出所有主题的请求。
+#[derive(Debug)]
+pub struct ListTopicsRequest {}
+
+/// 表示更新主题配置的请求。
+#[derive(Debug)]
+pub struct UpdateTopicConfigRequest {
+    /// 主题名称
+    pub name: String,
+    /// 新的配置项
+    pub configs: std::collections::HashMap<String, String>,
+}
+
+/// 表示获取集群信息的请求。
+#[derive(Debug)]
+pub struct GetClusterInfoRequest {}
