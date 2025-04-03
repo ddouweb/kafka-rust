@@ -20,6 +20,30 @@ mod tests {
     }
 
     #[test]
+    fn test_topic_init_partition() {
+        let mut topic = Topic::new(TEST_TOPIC.to_string(), TopicConfig {
+            name: TEST_TOPIC.to_string(),
+            partitions: 3,
+            replication_factor: 1,
+            segment_size: 1024 * 1024,
+            base_dir: LOD_DIR.to_string(),
+        });
+
+        let metadata = PartitionMetadata {
+            id: 0,
+            leader: 0,
+            replicas: vec![0],
+            isr: vec![0],
+        };
+
+        assert!(topic.init_partitions().is_ok());
+        assert_eq!(topic.get_partition_count(), 3);
+        
+        // 测试重复创建分区
+        assert!(topic.create_partition(0, metadata).is_err());
+    }
+
+    #[test]
     fn test_partition_creation() {
         let mut topic = Topic::new(TEST_TOPIC.to_string(), TopicConfig {
             name: TEST_TOPIC.to_string(),
@@ -36,36 +60,15 @@ mod tests {
             isr: vec![0],
         };
 
-        assert!(topic.create_partition(0, metadata.clone()).is_ok());
-        assert_eq!(topic.get_partition_count(), 1);
+        assert!(topic.init_partitions().is_ok());
+        assert_eq!(topic.get_partition_count(), 3);
         
         // 测试重复创建分区
-        assert!(topic.create_partition(0, metadata).is_err());
-    }
-
-    #[test]
-    fn test_partition_deletion() {
-        let mut topic = Topic::new(TEST_TOPIC.to_string(), TopicConfig {
-            name: TEST_TOPIC.to_string(),
-            partitions: 3,
-            replication_factor: 1,
-            segment_size: 1024 * 1024,
-            base_dir: LOD_DIR.to_string(),
-        });
-
-        let metadata = PartitionMetadata {
-            id: 0,
-            leader: 0,
-            replicas: vec![0],
-            isr: vec![0],
-        };
-
-        topic.create_partition(0, metadata).unwrap();
-        assert!(topic.delete_partition(0).is_ok());
-        assert_eq!(topic.get_partition_count(), 0);
-        
-        // 测试删除不存在的分区
-        assert!(topic.delete_partition(0).is_err());
+        assert!(topic.create_partition(0, metadata.clone()).is_err());
+        assert!(topic.create_partition(1, metadata.clone()).is_err());
+        assert!(topic.create_partition(2, metadata.clone()).is_err());
+        //测试分区号大于等于分区数量
+        assert!(topic.create_partition(3, metadata.clone()).is_err());
     }
 
     #[test]
@@ -132,5 +135,46 @@ mod tests {
         // 验证主题已被删除
         let result = manager.get_topic(TEST_TOPIC).unwrap();
         assert!(result.is_none());
+    }
+
+
+    #[test]
+    fn test_partition_deletion() {
+        let mut topic = Topic::new(TEST_TOPIC.to_string(), TopicConfig {
+            name: TEST_TOPIC.to_string(),
+            partitions: 3,
+            replication_factor: 1,
+            segment_size: 1024 * 1024,
+            base_dir: LOD_DIR.to_string(),
+        });
+
+        let metadata = PartitionMetadata {
+            id: 0,
+            leader: 0,
+            replicas: vec![0],
+            isr: vec![0],
+        };
+
+        topic.create_partition(0, metadata).unwrap();
+        assert!(topic.delete_partition(0).is_ok());
+        assert_eq!(topic.get_partition_count(), 0);
+        
+        // 测试删除不存在的分区
+        assert!(topic.delete_partition(0).is_err());
+    }
+
+    #[test]
+    fn test_topic_delete() {
+        let config = TopicConfig {
+            name: TEST_TOPIC.to_string(),
+            partitions: 3,
+            replication_factor: 1,
+            segment_size: 1024 * 1024,
+            base_dir: LOD_DIR.to_string(),
+        };
+        let mut topic = Topic::new(TEST_TOPIC.to_string(), config.clone());
+        topic.init_partitions().unwrap(); //初始化所有分区
+        topic.delete_topic().unwrap(); //删除主题
+        assert_eq!(topic.get_partition_count(), 0);
     }
 } 
