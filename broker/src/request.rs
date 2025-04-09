@@ -1,4 +1,4 @@
-use network::BinaryMessage;
+use protocol::message::{BinaryMessage, MessageType};
 use crate::broker::Broker;
 
 pub struct RequestHandler {
@@ -11,8 +11,8 @@ impl RequestHandler {
     }
 
     pub fn handle_request(&self, request: BinaryMessage) -> BinaryMessage {
-        match request.msg_type {
-            1 => {  // 生产者请求
+        /* match request.msg_type {
+            MessageType::Produce => {  // 生产者请求
                 let msg_id = self.broker.send_message("default_topic", request.payload);
                 BinaryMessage {
                     msg_type: 1,
@@ -20,7 +20,7 @@ impl RequestHandler {
                     payload: vec![],
                 }
             }
-            2 => {  // 消费者请求
+            MessageType::CreateTopic => {  // 消费者请求
                 let response = self.broker.fetch_message("default_topic", 0, request.msg_id);
                 BinaryMessage {
                     msg_type: 2,
@@ -33,6 +33,7 @@ impl RequestHandler {
                 msg_id: 0,
                 payload: vec![],
             },
-        }
+        } */
+        unimplemented!()
     }
 }

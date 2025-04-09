@@ -1,3 +1,6 @@
+pub mod message;
+pub use message::{BinaryMessage, MessageType};
+
 /// 表示对 Kafka 协议的客户端请求。
 #[derive(Debug)]
 pub enum ClientRequest {

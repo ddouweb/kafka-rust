@@ -520,6 +520,7 @@ name = "network"
 version = "0.1.0"
 dependencies = [
  "protocol",
+ "serde",
  "serde_json",
  "tokio",
 ]

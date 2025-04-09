@@ -1,5 +1,5 @@
 use std::vec;
-use network::message::BinaryMessage;
+use protocol::{BinaryMessage, MessageType};
 use tokio::net::TcpStream;
 use network::send_message;
 use network::receive_message;
@@ -12,9 +12,10 @@ async fn test_send_message() {
     let mut stream = TcpStream::connect(addr).await.unwrap();
 
     let original_msg = BinaryMessage {
-        msg_type: 1,
+        msg_type: MessageType::Produce,
         msg_id: 10001001,
         payload: vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+
     };
 
     send_message(&mut stream, &original_msg)
