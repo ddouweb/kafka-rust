@@ -1,8 +1,10 @@
+use serde::{Serialize, Deserialize};
+
 pub mod message;
 pub use message::{BinaryMessage, MessageType};
 
 /// 表示对 Kafka 协议的客户端请求。
-#[derive(Debug)]
+#[derive(Debug, Serialize, Deserialize)]
 pub enum ClientRequest {
     /// 向特定主题和分区发送消息的请求。
     Produce(ProduceRequest),
@@ -31,7 +33,7 @@ pub enum ClientRequest {
 }
 
 /// 表示向 Kafka 主题发送消息的请求。
-#[derive(Debug)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct ProduceRequest {
     /// 要发送消息的主题名称。
     pub topic: String,
@@ -42,7 +44,7 @@ pub struct ProduceRequest {
 }
 
 /// 表示从 Kafka 主题获取消息的请求。
-#[derive(Debug)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct FetchRequest {
     /// 要获取消息的主题名称。
     pub topic: String,
@@ -53,14 +55,14 @@ pub struct FetchRequest {
 }
 
 /// 表示获取 Kafka 主题元数据的请求。
-#[derive(Debug)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct MetadataRequest {
     /// 要获取元数据的主题名称。如果为 `None`，则获取所有主题的元数据。
     pub topic: Option<String>,
 }
 
 /// 表示获取特定消费者组偏移量的请求。
-#[derive(Debug)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct OffsetFetchRequest {
     /// 消费者组的 ID。
     pub group_id: String,
@@ -71,7 +73,7 @@ pub struct OffsetFetchRequest {
 }
 
 /// 表示加入 Kafka 消费者组的请求。
-#[derive(Debug)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct JoinGroupRequest {
     /// 要加入的消费者组 ID。
     pub group_id: String,
@@ -80,7 +82,7 @@ pub struct JoinGroupRequest {
 }
 
 /// 表示同步 Kafka 消费者组状态的请求。
-#[derive(Debug)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct SyncGroupRequest {
     /// 要同步的消费者组 ID。
     pub group_id: String,
@@ -91,7 +93,7 @@ pub struct SyncGroupRequest {
 }
 
 /// 表示创建主题的请求。
-#[derive(Debug)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct CreateTopicRequest {
     /// 主题名称
     pub name: String,
@@ -104,25 +106,25 @@ pub struct CreateTopicRequest {
 }
 
 /// 表示删除主题的请求。
-#[derive(Debug)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct DeleteTopicRequest {
     /// 主题名称
     pub name: String,
 }
 
 /// 表示获取主题描述的请求。
-#[derive(Debug)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct DescribeTopicRequest {
     /// 主题名称
     pub name: String,
 }
 
 /// 表示列出所有主题的请求。
-#[derive(Debug)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct ListTopicsRequest {}
 
 /// 表示更新主题配置的请求。
-#[derive(Debug)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct UpdateTopicConfigRequest {
     /// 主题名称
     pub name: String,
@@ -131,5 +133,7 @@ pub struct UpdateTopicConfigRequest {
 }
 
 /// 表示获取集群信息的请求。
-#[derive(Debug)]
-pub struct GetClusterInfoRequest {}
+#[derive(Debug, Serialize, Deserialize)]
+pub struct GetClusterInfoRequest {
+    // 空结构体，表示不需要任何参数
+}
