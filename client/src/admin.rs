@@ -93,13 +93,14 @@ impl AdminClient {
         });
         
         
-        let response = self.network_server.send_request(&self.broker_addr, request).await?;
+        // let response = self.network_server.send_request(&self.broker_addr, request).await?;
         
-        if response.success {
-            Ok(())
-        } else {
-            Err(response.error.unwrap_or_else(|| "未知错误".to_string()))
-        }
+        // if response.success {
+        //     Ok(())
+        // } else {
+        //     Err(response.error.unwrap_or_else(|| "未知错误".to_string()))
+        // }
+        unimplemented!()
     }
 
     /// 删除主题
@@ -114,13 +115,14 @@ impl AdminClient {
             name: topic_name.to_string(),
         });
         
-        let response = self.network_server.send_request(&self.broker_addr, request).await?;
+        // let response = self.network_server.send_request(&self.broker_addr, request).await?;
         
-        if response.success {
-            Ok(())
-        } else {
-            Err(response.error.unwrap_or_else(|| "未知错误".to_string()))
-        }
+        // if response.success {
+        //     Ok(())
+        // } else {
+        //     Err(response.error.unwrap_or_else(|| "未知错误".to_string()))
+        // }
+        unimplemented!()
     }
 
     /// 获取主题描述
@@ -135,18 +137,19 @@ impl AdminClient {
             name: topic_name.to_string(),
         });
         
-        let response = self.network_server.send_request(&self.broker_addr, request).await?;
+        // let response = self.network_server.send_request(&self.broker_addr, request).await?;
         
-        if response.success {
-            if let Some(data) = response.data {
-                serde_json::from_value(data)
-                    .map_err(|e| format!("解析主题描述失败: {}", e))
-            } else {
-                Err("响应数据为空".to_string())
-            }
-        } else {
-            Err(response.error.unwrap_or_else(|| "未知错误".to_string()))
-        }
+        // if response.success {
+        //     if let Some(data) = response.data {
+        //         serde_json::from_value(data)
+        //             .map_err(|e| format!("解析主题描述失败: {}", e))
+        //     } else {
+        //         Err("响应数据为空".to_string())
+        //     }
+        // } else {
+        //     Err(response.error.unwrap_or_else(|| "未知错误".to_string()))
+        // }
+        unimplemented!()
     }
 
     /// 列出所有主题
@@ -156,18 +159,19 @@ impl AdminClient {
     pub async fn list_topics(&self) -> Result<Vec<String>, String> {
         let request = ClientRequest::ListTopics(ListTopicsRequest {});
         
-        let response = self.network_server.send_request(&self.broker_addr, request).await?;
+        // let response = self.network_server.send_request(&self.broker_addr, request).await?;
         
-        if response.success {
-            if let Some(data) = response.data {
-                serde_json::from_value(data)
-                    .map_err(|e| format!("解析主题列表失败: {}", e))
-            } else {
-                Err("响应数据为空".to_string())
-            }
-        } else {
-            Err(response.error.unwrap_or_else(|| "未知错误".to_string()))
-        }
+        // if response.success {
+        //     if let Some(data) = response.data {
+        //         serde_json::from_value(data)
+        //             .map_err(|e| format!("解析主题列表失败: {}", e))
+        //     } else {
+        //         Err("响应数据为空".to_string())
+        //     }
+        // } else {
+        //     Err(response.error.unwrap_or_else(|| "未知错误".to_string()))
+        // }
+        unimplemented!()
     }
 
     /// 更新主题配置
@@ -185,14 +189,15 @@ impl AdminClient {
         });
 
         let mut stream = std::net::TcpStream::connect(&self.broker_addr).unwrap();
-        send_message(&mut stream, &request);
-        let response = receive_message(&mut stream).await?;
+        // send_message(&mut stream, &request);
+        // let response = receive_message(&mut stream).await?;
         
-        if response.success {
-            Ok(())
-        } else {
-            Err(response.error.unwrap_or_else(|| "未知错误".to_string()))
-        }
+        // if response.success {
+        //     Ok(())
+        // } else {
+        //     Err(response.error.unwrap_or_else(|| "未知错误".to_string()))
+        // }
+        unimplemented!()
     }
 
     /// 获取集群信息
@@ -202,17 +207,18 @@ impl AdminClient {
     pub async fn get_cluster_info(&self) -> Result<Vec<i32>, String> {
         let request = ClientRequest::GetClusterInfo(GetClusterInfoRequest {});
         
-        let response = self.network_server.send_request(&self.broker_addr, request).await?;
+        // let response = self.network_server.send_request(&self.broker_addr, request).await?;
         
-        if response.success {
-            if let Some(data) = response.data {
-                serde_json::from_value(data)
-                    .map_err(|e| format!("解析集群信息失败: {}", e))
-            } else {
-                Err("响应数据为空".to_string())
-            }
-        } else {
-            Err(response.error.unwrap_or_else(|| "未知错误".to_string()))
-        }
+        // if response.success {
+        //     if let Some(data) = response.data {
+        //         serde_json::from_value(data)
+        //             .map_err(|e| format!("解析集群信息失败: {}", e))
+        //     } else {
+        //         Err("响应数据为空".to_string())
+        //     }
+        // } else {
+        //     Err(response.error.unwrap_or_else(|| "未知错误".to_string()))
+        // }
+        unimplemented!()
     }
 } 

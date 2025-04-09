@@ -22,7 +22,7 @@ impl BinaryMessage {
     }
 
     /// **从BinaryMessage的二进制数据解析成 `BinaryMessage`**
-    pub fn decode(mut buffer: &[u8]) -> io::Result<Self> {
+    pub fn decode(buffer: &[u8]) -> io::Result<Self> {
         // 确保 buffer 至少有 5 字节（1 字节类型 + 4 字节 ID）
         if buffer.len() < 5 {
             return Err(io::Error::new(
@@ -33,14 +33,14 @@ impl BinaryMessage {
 
         // 读取消息类型（1 字节）
         let msg_type = buffer[0];
-        buffer = &buffer[1..];
+        let body = &buffer[1..];
 
         // 读取消息 ID（4 字节）
-        let msg_id = u32::from_be_bytes(buffer[..4].try_into().unwrap());
-        buffer = &buffer[4..];
+        let msg_id = u32::from_be_bytes(body[..4].try_into().unwrap());
+        let payload = &body[4..];
 
         // 剩下的就是 payload
-        let payload = buffer.to_vec();
+        let payload = payload.to_vec();
 
         Ok(BinaryMessage {
             msg_type,
