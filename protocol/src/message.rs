@@ -139,27 +139,16 @@ impl BinaryMessage {
         buffer
     }
 
-    /// 从二进制数据解析成 BinaryMessage
-    pub fn decode(buffer: &[u8]) -> io::Result<Self> {
-        // 确保 buffer 至少有 17 字节（4字节消息长度 + 13字节消息体）
-        if buffer.len() < 17 {
+    /// 将二进制数据转换为 BinaryMessage
+    /// 已经移除数据流长度字节。全部为消息体
+    pub fn decode_buffer(body: &[u8]) ->  io::Result<Self> {
+        // 确保 buffer 至少有 13 字节（13字节消息体）
+        if body.len() < 13 {
             return Err(io::Error::new(
                 io::ErrorKind::UnexpectedEof,
                 "Buffer too short",
             ));
         }
-
-        // 读取消息长度（4字节）
-        let msg_length = u32::from_be_bytes(buffer[..4].try_into().unwrap()) as usize;
-        if buffer.len() < msg_length + 4 {
-            return Err(io::Error::new(
-                io::ErrorKind::UnexpectedEof,
-                "Buffer length mismatch",
-            ));
-        }
-
-        // 读取消息体（从第5字节开始）
-        let body = &buffer[4..];
 
         // 读取消息类型（1字节）
         let msg_type = MessageType::from(body[0]);
@@ -187,6 +176,57 @@ impl BinaryMessage {
             client_id,
             payload,
         })
+    }
+
+    /// 从二进制数据解析成 BinaryMessage
+    pub fn decode(buffer: &[u8]) -> io::Result<Self> {
+        // 确保 buffer 至少有 17 字节（4字节消息长度 + 13字节消息体）
+        if buffer.len() < 17 {
+            return Err(io::Error::new(
+                io::ErrorKind::UnexpectedEof,
+                "Buffer too short",
+            ));
+        }
+
+        // 读取消息长度（4字节）
+        let msg_length = u32::from_be_bytes(buffer[..4].try_into().unwrap()) as usize;
+        if buffer.len() < msg_length + 4 {
+            return Err(io::Error::new(
+                io::ErrorKind::UnexpectedEof,
+                "Buffer length mismatch",
+            ));
+        }
+
+        // 读取消息体（从第5字节开始）
+        let body = &buffer[4..];
+
+        Self::decode_buffer(body)
+        // // 读取消息类型（1字节）
+        // let msg_type = MessageType::from(body[0]);
+        // let body = &body[1..];
+
+        // // 读取消息 ID（4字节）
+        // let msg_id = u32::from_be_bytes(body[..4].try_into().unwrap());
+        // let body = &body[4..];
+
+        // // 读取 correlation_id（4字节）
+        // let correlation_id = u32::from_be_bytes(body[..4].try_into().unwrap());
+        // let body = &body[4..];
+
+        // // 读取 client_id（4字节）
+        // let client_id = u32::from_be_bytes(body[..4].try_into().unwrap());
+        // let body = &body[4..];
+
+        // // 剩下的就是 payload
+        // let payload = body.to_vec();
+
+        // Ok(BinaryMessage {
+        //     msg_type,
+        //     msg_id,
+        //     correlation_id,
+        //     client_id,
+        //     payload,
+        // })
     }
 
     /// 从数据流解析成 BinaryMessage

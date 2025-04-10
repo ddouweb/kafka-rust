@@ -4,6 +4,7 @@ use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::TcpStream;
 
 pub mod server;
+
 pub use server::NetworkServer;
 
 /// 消息处理器trait
@@ -23,7 +24,7 @@ pub async fn receive_message(stream: &mut TcpStream) -> io::Result<BinaryMessage
     stream.read_exact(&mut buffer).await?;
 
     // 解析消息
-    BinaryMessage::decode(&buffer)
+    BinaryMessage::decode_buffer(&buffer).map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))
 }
 
 /// 发送消息到流

@@ -3,6 +3,11 @@ use serde::{Serialize, Deserialize};
 pub mod message;
 pub use message::{BinaryMessage, MessageType};
 
+/// 消息处理器trait
+pub trait MessageHandler: Send + Sync {
+    fn handle_message(&self, message: BinaryMessage) -> Option<message::BinaryMessage>;
+}
+
 /// 表示对 Kafka 协议的客户端请求。
 #[derive(Debug, Serialize, Deserialize)]
 pub enum ClientRequest {

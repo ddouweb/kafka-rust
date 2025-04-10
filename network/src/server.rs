@@ -1,14 +1,10 @@
-use std::sync::Arc;
 use tokio::net::TcpListener;
-use tokio::sync::Mutex;
 use tokio::io::ErrorKind;
-use protocol::message::{BinaryMessage, MessageType};
+use protocol::MessageHandler;
+use std::sync::Arc;
+use tokio::sync::Mutex;
+use protocol::message::MessageType;
 use std::collections::HashMap;
-
-/// 消息处理器trait
-pub trait MessageHandler: Send + Sync {
-    fn handle_message(&self, message: BinaryMessage) -> Option<BinaryMessage>;
-}
 
 pub struct NetworkServer {
     address: String,
@@ -75,16 +71,5 @@ impl NetworkServer {
             });
         }
     }
-}
 
-/// 根据消息内容确定消息类型
-fn determine_message_type(message: &BinaryMessage) -> String {
-    // 这里需要根据实际的消息结构来确定类型
-    // 例如：可以从消息中提取类型字段，或者根据msg_id映射到类型
-    // 这里只是一个示例实现
-    match message.msg_id {
-        1 => "login".to_string(),
-        2 => "chat".to_string(),
-        _ => "unknown".to_string(),
-    }
 }

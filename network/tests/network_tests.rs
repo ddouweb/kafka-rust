@@ -1,43 +1,98 @@
-use std::vec;
-use protocol::{BinaryMessage, MessageType};
-use tokio::net::TcpStream;
-use network::send_message;
 use network::receive_message;
+use network::send_message;
+use protocol::{BinaryMessage, MessageType};
+use std::vec;
+use tokio::io::AsyncWriteExt;
+use tokio::net::TcpListener;
+use tokio::net::TcpStream;
+
+async fn setup_test_server() -> (TcpStream, TcpStream) {
+    let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let addr = listener.local_addr().unwrap();
+    let server = tokio::spawn(async move { listener.accept().await.unwrap().0 });
+    let client = TcpStream::connect(addr).await.unwrap();
+    let server = server.await.unwrap();
+    (server, client)
+}
 
 #[tokio::test]
-async fn test_send_message() {
-    let addr = "127.0.0.1:9092";
+async fn test_message_roundtrip() {
+    let (mut server, mut client) = setup_test_server().await;
 
-    // 模拟客户端连接服务器
-    let mut stream = TcpStream::connect(addr).await.unwrap();
-
-    let original_msg = BinaryMessage {
+    // 创建测试消息
+    let test_message = BinaryMessage {
+        msg_id: 1,
         msg_type: MessageType::Produce,
-        msg_id: 10001001,
-        correlation_id: 10001002,
-        client_id: 10001003,
-        payload: vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
-
+        payload: vec![1, 2, 3, 4],
+        client_id: 1,
+        correlation_id: 1,
     };
 
-    send_message(&mut stream, &original_msg)
-        .await
-        .expect("Failed to send message");
+    // 发送消息
+    send_message(&mut client, &test_message).await.unwrap();
 
-    let response = receive_message(&mut stream)
-        .await
-        .expect("Failed to read message");
-    println!("{:?}", response);
-    assert_eq!(response.payload, original_msg.payload);
-    assert_eq!(response.msg_type, original_msg.msg_type);
-    assert_eq!(response.msg_id, original_msg.msg_id);
+    // 接收消息
+    let received = receive_message(&mut server).await.unwrap();
 
-    std::thread::sleep(std::time::Duration::new(2, 0)); // 睡眠2秒
-    // stream
-    //     .shutdown()
-    //     .await
-    //     .expect("Failed to shutdown connection");
-    // drop(stream); // 完全关闭连接
+    // 验证消息内容
+    assert_eq!(received.msg_id, test_message.msg_id);
+    assert_eq!(received.msg_type, test_message.msg_type);
+    assert_eq!(received.payload, test_message.payload);
+    assert_eq!(received.client_id, test_message.client_id);
+    assert_eq!(received.correlation_id, test_message.correlation_id);
+}
 
-    
+#[tokio::test]
+async fn test_invalid_message() {
+    let (mut server, mut client) = setup_test_server().await;
+
+    // 发送无效数据
+    client.write_all(&[0, 0, 0, 4, 1, 2, 3]).await.unwrap();
+    client.flush().await.unwrap();
+
+    // 应该返回错误
+    let result = receive_message(&mut server).await;
+    assert!(result.is_err());
+}
+
+#[tokio::test]
+async fn test_concurrent_messages() {
+    let (mut server, mut client) = setup_test_server().await;
+
+    // 创建两个测试消息
+    let message1 = BinaryMessage {
+        msg_id: 1,
+        msg_type: MessageType::Produce,
+        payload: vec![1, 2, 3],
+        client_id: 1,
+        correlation_id: 1,
+    };
+
+    let message2 = BinaryMessage {
+        msg_id: 2,
+        msg_type: MessageType::Fetch,
+        payload: vec![4, 5, 6],
+        client_id: 2,
+        correlation_id: 2,
+    };
+
+    // 发送两个消息
+    send_message(&mut client, &message1).await.unwrap();
+    send_message(&mut client, &message2).await.unwrap();
+
+    // 接收并验证第一个消息
+    let received1 = receive_message(&mut server).await.unwrap();
+    assert_eq!(received1.msg_id, message1.msg_id);
+    assert_eq!(received1.msg_type, message1.msg_type);
+    assert_eq!(received1.payload, message1.payload);
+    assert_eq!(received1.client_id, message1.client_id);
+    assert_eq!(received1.correlation_id, message1.correlation_id);
+
+    // 接收并验证第二个消息
+    let received2 = receive_message(&mut server).await.unwrap();
+    assert_eq!(received2.msg_id, message2.msg_id);
+    assert_eq!(received2.msg_type, message2.msg_type);
+    assert_eq!(received2.payload, message2.payload);
+    assert_eq!(received2.client_id, message2.client_id);
+    assert_eq!(received2.correlation_id, message2.correlation_id);
 }

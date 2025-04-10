@@ -13,7 +13,7 @@ network = { path = "./network" }
 storage = { path = "./storage" }
 queue = { path = "./queue" }
 client = { path = "./client" }
-broker = { path = "./broker" }
+#broker = { path = "./broker" }
 replication = { path = "./replication" }
 cluster = { path = "./cluster" }
 cfg = { path = "./cfg" }

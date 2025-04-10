@@ -2,6 +2,7 @@ pub mod metadata;
 pub mod topic;
 pub mod broker;
 pub mod request;
+pub mod handlers;
 
 // 对外暴露的核心接口
 pub use broker::Broker;
