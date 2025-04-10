@@ -14,6 +14,8 @@ async fn test_send_message() {
     let original_msg = BinaryMessage {
         msg_type: MessageType::Produce,
         msg_id: 10001001,
+        correlation_id: 10001002,
+        client_id: 10001003,
         payload: vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
 
     };

@@ -6,6 +6,11 @@ use tokio::net::TcpStream;
 pub mod server;
 pub use server::NetworkServer;
 
+/// 消息处理器trait
+pub trait MessageHandler: Send + Sync {
+    fn handle_message(&self, message: BinaryMessage) -> Option<BinaryMessage>;
+}
+
 /// 从流中接收消息
 pub async fn receive_message(stream: &mut TcpStream) -> io::Result<BinaryMessage> {
     // 读取消息长度（4字节）
