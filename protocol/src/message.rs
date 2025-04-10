@@ -1,5 +1,6 @@
 use std::io::{self, Read, Write};
 use serde::{Serialize, Deserialize};
+use std::hash::{Hash, Hasher};
 use crate::{ClientRequest, GetClusterInfoRequest};
 
 /// 消息类型枚举，对应不同的协议操作
@@ -20,6 +21,12 @@ pub enum MessageType {
     Heartbeat = 12,
     LeaveGroup = 13,
     Unknown = 255,
+}
+
+impl Hash for MessageType {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        (*self as u8).hash(state);
+    }
 }
 
 impl From<u8> for MessageType {
