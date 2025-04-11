@@ -1,0 +1,32 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+---
+description: 测试规范
+globs: ["**/tests/*.rs"]
+alwaysApply: true
+---
+
+# 测试规范
+
+## 测试目录结构
+- 每个库模块必须在其根目录下创建 `tests` 目录
+
+## 测试内容规范
+- 单元测试：测试单个函数或方法
+- 集成测试：测试模块间的交互
+- 性能测试：测试关键路径的性能
+
+## 测试编写规范
+- 使用 `mod tests` 组织测试
+- 使用 `#[test]` 标记测试函数
+
+## 测试运行规范
+- 运行所有测试：`cargo test`
+- 使用 `cargo tarpaulin` 检查测试覆盖率
+
+## 测试维护规范
+- 功能变更时同步更新测试
+- 修复 bug 时添加回归测试 
