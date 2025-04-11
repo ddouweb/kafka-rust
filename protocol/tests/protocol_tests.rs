@@ -1,4 +1,5 @@
-use protocol::{BinaryMessage, MessageType, ClientRequest, ProduceRequest, FetchRequest, GetClusterInfoRequest};
+use protocol::{ClientRequest, ProduceRequest, FetchRequest, GetClusterInfoRequest};
+
 
 #[test]
 fn test_message_type_conversion() {

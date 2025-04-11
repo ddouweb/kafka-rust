@@ -1,70 +1,19 @@
 use std::io::{self, Read, Write};
-use serde::{Serialize, Deserialize};
-use std::hash::{Hash, Hasher};
-use crate::{ClientRequest, GetClusterInfoRequest};
-
-/// 消息类型枚举，对应不同的协议操作
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-pub enum MessageType {
-    Produce = 0,
-    Fetch = 1,
-    Metadata = 2,
-    OffsetFetch = 3,
-    JoinGroup = 4,
-    SyncGroup = 5,
-    CreateTopic = 6,
-    DeleteTopic = 7,
-    DescribeTopic = 8,
-    ListTopics = 9,
-    UpdateTopicConfig = 10,
-    GetClusterInfo = 11,
-    Heartbeat = 12,
-    LeaveGroup = 13,
-    Unknown = 255,
-}
-
-impl Hash for MessageType {
-    fn hash<H: Hasher>(&self, state: &mut H) {
-        (*self as u8).hash(state);
-    }
-}
-
-impl From<u8> for MessageType {
-    fn from(value: u8) -> Self {
-        match value {
-            0 => MessageType::Produce,
-            1 => MessageType::Fetch,
-            2 => MessageType::Metadata,
-            3 => MessageType::OffsetFetch,
-            4 => MessageType::JoinGroup,
-            5 => MessageType::SyncGroup,
-            6 => MessageType::CreateTopic,
-            7 => MessageType::DeleteTopic,
-            8 => MessageType::DescribeTopic,
-            9 => MessageType::ListTopics,
-            10 => MessageType::UpdateTopicConfig,
-            11 => MessageType::GetClusterInfo,
-            12 => MessageType::Heartbeat,
-            13 => MessageType::LeaveGroup,
-            _ => MessageType::Unknown,
-        }
-    }
-}
-
-impl From<MessageType> for u8 {
-    fn from(value: MessageType) -> Self {
-        value as u8
-    }
-}
-
+use crate::message::types::MessageType;
+use crate::ClientRequest;
 /// 二进制消息结构，用于网络传输
 #[derive(Debug, Clone)]
 pub struct BinaryMessage {
-    pub msg_type: MessageType,      // 消息类型
-    pub msg_id: u32,               // 消息唯一标识
-    pub correlation_id: u32,       // 请求-响应关联ID
-    pub client_id: u32,         // 客户端ID
-    pub payload: Vec<u8>,          // 消息内容
+    /// 消息类型
+    pub msg_type: MessageType,
+    /// 消息唯一标识
+    pub msg_id: u32,
+    /// 请求-响应关联ID
+    pub correlation_id: u32,
+    /// 客户端ID
+    pub client_id: u32,
+    /// 消息内容
+    pub payload: Vec<u8>,
 }
 
 impl BinaryMessage {
@@ -99,7 +48,7 @@ impl BinaryMessage {
             ClientRequest::DescribeTopic(req) => (MessageType::DescribeTopic, serde_json::to_vec(req).unwrap()),
             ClientRequest::ListTopics(req) => (MessageType::ListTopics, serde_json::to_vec(req).unwrap()),
             ClientRequest::UpdateTopicConfig(req) => (MessageType::UpdateTopicConfig, serde_json::to_vec(req).unwrap()),
-            ClientRequest::GetClusterInfo(_) => (MessageType::GetClusterInfo, vec![]), // 空结构体直接返回空数组
+            ClientRequest::GetClusterInfo(_) => (MessageType::GetClusterInfo, vec![]),
         };
         Self::new(msg_type, msg_id, correlation_id, client_id, payload)
     }
@@ -118,7 +67,7 @@ impl BinaryMessage {
             MessageType::DescribeTopic => Ok(ClientRequest::DescribeTopic(serde_json::from_slice(&self.payload)?)),
             MessageType::ListTopics => Ok(ClientRequest::ListTopics(serde_json::from_slice(&self.payload)?)),
             MessageType::UpdateTopicConfig => Ok(ClientRequest::UpdateTopicConfig(serde_json::from_slice(&self.payload)?)),
-            MessageType::GetClusterInfo => Ok(ClientRequest::GetClusterInfo(GetClusterInfoRequest {})), // 直接创建空结构体
+            MessageType::GetClusterInfo => Ok(ClientRequest::GetClusterInfo(GetClusterInfoRequest {})),
             _ => Err(io::Error::new(io::ErrorKind::InvalidData, "Unknown message type")),
         }
     }
@@ -134,14 +83,14 @@ impl BinaryMessage {
         buffer.write_all(&[self.msg_type.into()]).unwrap();           // 1字节 类型
         buffer.write_all(&self.msg_id.to_be_bytes()).unwrap();        // 4字节 标识
         buffer.write_all(&self.correlation_id.to_be_bytes()).unwrap(); // 4字节 correlation_id
-        buffer.write_all(&self.client_id.to_be_bytes()).unwrap();        // 4字节 client_id
+        buffer.write_all(&self.client_id.to_be_bytes()).unwrap();     // 4字节 client_id
         buffer.write_all(&self.payload).unwrap();                     // 可变长度 数据
         buffer
     }
 
     /// 将二进制数据转换为 BinaryMessage
     /// 已经移除数据流长度字节。全部为消息体
-    pub fn decode_buffer(body: &[u8]) ->  io::Result<Self> {
+    pub fn decode_buffer(body: &[u8]) -> io::Result<Self> {
         // 确保 buffer 至少有 13 字节（13字节消息体）
         if body.len() < 13 {
             return Err(io::Error::new(
@@ -199,34 +148,7 @@ impl BinaryMessage {
 
         // 读取消息体（从第5字节开始）
         let body = &buffer[4..];
-
         Self::decode_buffer(body)
-        // // 读取消息类型（1字节）
-        // let msg_type = MessageType::from(body[0]);
-        // let body = &body[1..];
-
-        // // 读取消息 ID（4字节）
-        // let msg_id = u32::from_be_bytes(body[..4].try_into().unwrap());
-        // let body = &body[4..];
-
-        // // 读取 correlation_id（4字节）
-        // let correlation_id = u32::from_be_bytes(body[..4].try_into().unwrap());
-        // let body = &body[4..];
-
-        // // 读取 client_id（4字节）
-        // let client_id = u32::from_be_bytes(body[..4].try_into().unwrap());
-        // let body = &body[4..];
-
-        // // 剩下的就是 payload
-        // let payload = body.to_vec();
-
-        // Ok(BinaryMessage {
-        //     msg_type,
-        //     msg_id,
-        //     correlation_id,
-        //     client_id,
-        //     payload,
-        // })
     }
 
     /// 从数据流解析成 BinaryMessage
@@ -256,8 +178,8 @@ impl BinaryMessage {
         stream.read_exact(&mut client_id_buf)?;
         let client_id = u32::from_be_bytes(client_id_buf);
 
-        // 读取 payload（剩余字节）
-        let mut payload = vec![0u8; msg_length - 13]; // 13 = 1(msg_type) + 4(msg_id) + 4(correlation_id) + 4(client_id)
+        // 读取 payload
+        let mut payload = vec![0u8; msg_length - 13];
         stream.read_exact(&mut payload)?;
 
         Ok(BinaryMessage {

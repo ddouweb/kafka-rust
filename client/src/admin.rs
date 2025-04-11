@@ -4,8 +4,6 @@ use protocol::{
     ClientRequest, CreateTopicRequest, DeleteTopicRequest, DescribeTopicRequest,
     ListTopicsRequest, UpdateTopicConfigRequest, GetClusterInfoRequest,
 };
-use network::send_message;
-use network::receive_message;
 use serde::{Serialize, Deserialize};
 
 /// 主题配置
@@ -188,7 +186,7 @@ impl AdminClient {
             configs,
         });
 
-        let mut stream = std::net::TcpStream::connect(&self.broker_addr).unwrap();
+        let stream = std::net::TcpStream::connect(&self.broker_addr).unwrap();
         // send_message(&mut stream, &request);
         // let response = receive_message(&mut stream).await?;
         

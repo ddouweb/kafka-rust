@@ -1,7 +1,4 @@
 use protocol::message::BinaryMessage;
-use std::io;
-use tokio::io::{AsyncReadExt, AsyncWriteExt};
-use tokio::net::TcpStream;
 
 pub mod server;
 
@@ -12,7 +9,7 @@ pub trait MessageHandler: Send + Sync {
     fn handle_message(&self, message: BinaryMessage) -> Option<BinaryMessage>;
 }
 
-/// 从流中接收消息
+/* /// 从流中接收消息
 pub async fn receive_message(stream: &mut TcpStream) -> io::Result<BinaryMessage> {
     // 读取消息长度（4字节）
     let mut length_buf = [0u8; 4];
@@ -33,4 +30,4 @@ pub async fn send_message(stream: &mut TcpStream, message: &BinaryMessage) -> io
     stream.write_all(&encoded).await?;
     stream.flush().await?;
     Ok(())
-}
+} */

@@ -1,4 +1,3 @@
-use std::collections::HashMap;
 
 /// 生产者配置
 #[derive(Debug, Clone)]
