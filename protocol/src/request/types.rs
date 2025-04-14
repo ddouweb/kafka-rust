@@ -27,6 +27,10 @@ pub enum ClientRequest {
     UpdateTopicConfig(UpdateTopicConfigRequest),
     /// 获取集群信息的请求。
     GetClusterInfo(GetClusterInfoRequest),
+    /// 心跳请求。
+    Heartbeat(HeartbeatRequest),
+    /// 离开消费者组的请求。
+    LeaveGroup(LeaveGroupRequest),
 }
 
 /// 生产消息请求

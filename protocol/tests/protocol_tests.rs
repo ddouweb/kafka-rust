@@ -155,6 +155,19 @@ fn test_invalid_payload() {
 
     // 尝试转换为 ClientRequest 应该失败
     assert!(invalid_msg.to_request().is_err());
+
+
+    // 创建一个带有无效负载的消息 GetClusterInfo 本身不处理负载，所以可以成功。如果传递负载，会丢弃负载信息
+    let invalid_msg = BinaryMessage::new(
+        MessageType::GetClusterInfo,  // 使用需要负载的消息类型
+        123,
+        456,
+        789,
+        vec![1,2,3,4], // 空负载
+    );
+
+    // 尝试转换为 ClientRequest 应该成功
+    assert!(invalid_msg.to_request().is_ok());
 }
 
 #[test]

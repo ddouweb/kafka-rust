@@ -2,6 +2,8 @@ use std::io::{self, Read, Write};
 use crate::message::types::MessageType;
 use crate::ClientRequest;
 use crate::request::GetClusterInfoRequest;
+use crate::request::HeartbeatRequest;
+use crate::request::LeaveGroupRequest;
 /// 二进制消息结构，用于网络传输
 #[derive(Debug, Clone)]
 pub struct BinaryMessage {
@@ -50,6 +52,8 @@ impl BinaryMessage {
             ClientRequest::ListTopics(req) => (MessageType::ListTopics, serde_json::to_vec(req).unwrap()),
             ClientRequest::UpdateTopicConfig(req) => (MessageType::UpdateTopicConfig, serde_json::to_vec(req).unwrap()),
             ClientRequest::GetClusterInfo(_) => (MessageType::GetClusterInfo, vec![]),
+            ClientRequest::Heartbeat(req) => (MessageType::Heartbeat, serde_json::to_vec(req).unwrap()),
+            ClientRequest::LeaveGroup(req) => (MessageType::LeaveGroup, serde_json::to_vec(req).unwrap()),
         };
         Self::new(msg_type, msg_id, correlation_id, client_id, payload)
     }
@@ -68,7 +72,9 @@ impl BinaryMessage {
             MessageType::DescribeTopic => Ok(ClientRequest::DescribeTopic(serde_json::from_slice(&self.payload)?)),
             MessageType::ListTopics => Ok(ClientRequest::ListTopics(serde_json::from_slice(&self.payload)?)),
             MessageType::UpdateTopicConfig => Ok(ClientRequest::UpdateTopicConfig(serde_json::from_slice(&self.payload)?)),
-            MessageType::GetClusterInfo => Ok(ClientRequest::GetClusterInfo(GetClusterInfoRequest {})),
+            MessageType::GetClusterInfo => Ok(ClientRequest::GetClusterInfo(serde_json::from_slice(&self.payload)?)),
+            MessageType::Heartbeat => Ok(ClientRequest::Heartbeat(serde_json::from_slice(&self.payload)?)),
+            MessageType::LeaveGroup => Ok(ClientRequest::LeaveGroup(serde_json::from_slice(&self.payload)?)),
             _ => Err(io::Error::new(io::ErrorKind::InvalidData, "Unknown message type")),
         }
     }
