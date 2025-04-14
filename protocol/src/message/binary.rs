@@ -1,6 +1,7 @@
 use std::io::{self, Read, Write};
 use crate::message::types::MessageType;
 use crate::ClientRequest;
+use crate::request::GetClusterInfoRequest;
 /// 二进制消息结构，用于网络传输
 #[derive(Debug, Clone)]
 pub struct BinaryMessage {

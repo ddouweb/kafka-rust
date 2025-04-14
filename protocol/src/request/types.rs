@@ -34,7 +34,7 @@ pub enum ClientRequest {
 pub struct ProduceRequest {
     pub topic: String,
     pub partition: i32,
-    pub messages: Vec<Vec<u8>>,
+    pub messages: Vec<u8>,
 }
 
 /// 获取消息请求
@@ -91,7 +91,7 @@ pub struct LeaveGroupRequest {
 } 
 
 /// 表示创建主题的请求。
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct CreateTopicRequest {
     /// 主题名称
     pub name: String,
@@ -104,25 +104,25 @@ pub struct CreateTopicRequest {
 }
 
 /// 表示删除主题的请求。
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct DeleteTopicRequest {
     /// 主题名称
     pub name: String,
 }
 
 /// 表示获取主题描述的请求。
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct DescribeTopicRequest {
     /// 主题名称
     pub name: String,
 }
 
 /// 表示列出所有主题的请求。
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct ListTopicsRequest {}
 
 /// 表示更新主题配置的请求。
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct UpdateTopicConfigRequest {
     /// 主题名称
     pub name: String,
@@ -131,7 +131,7 @@ pub struct UpdateTopicConfigRequest {
 }
 
 /// 表示获取集群信息的请求。
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct GetClusterInfoRequest {
     // 空结构体，表示不需要任何参数
 }

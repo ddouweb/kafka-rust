@@ -1,6 +1,9 @@
-use protocol::{ClientRequest, ProduceRequest, FetchRequest, GetClusterInfoRequest};
-
-
+use protocol::message::MessageType;
+use protocol::message::BinaryMessage;
+use protocol::request::ClientRequest;
+use protocol::request::ProduceRequest;
+use protocol::request::GetClusterInfoRequest;
+use protocol::request::FetchRequest;
 #[test]
 fn test_message_type_conversion() {
     // 测试 MessageType 到 u8 的转换
@@ -61,7 +64,7 @@ fn test_client_request_to_binary_message() {
     let produce_request = ClientRequest::Produce(ProduceRequest {
         topic: "test-topic".to_string(),
         partition: 0,
-        message: vec![1, 2, 3, 4],
+        messages: vec![1, 2, 3, 4],
     });
 
     // 转换为 BinaryMessage
@@ -83,7 +86,7 @@ fn test_client_request_to_binary_message() {
         ClientRequest::Produce(req) => {
             assert_eq!(req.topic, "test-topic");
             assert_eq!(req.partition, 0);
-            assert_eq!(req.message, vec![1, 2, 3, 4]);
+            assert_eq!(req.messages, vec![1, 2, 3, 4]);
         }
         _ => panic!("Expected ProduceRequest"),
     }
@@ -96,6 +99,7 @@ fn test_fetch_request_to_binary_message() {
         topic: "test-topic".to_string(),
         partition: 0,
         offset: 100,
+        max_bytes: 1024,
     });
 
     // 转换为 BinaryMessage

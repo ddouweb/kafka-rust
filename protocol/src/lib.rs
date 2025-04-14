@@ -13,7 +13,6 @@ pub mod response;
 pub use message::{MessageType, BinaryMessage};
 pub use request::{ClientRequest, ProduceRequest, FetchRequest};
 pub use response::ServerResponse;
-
 // 导出错误类型
 pub mod error {
     use thiserror::Error;
